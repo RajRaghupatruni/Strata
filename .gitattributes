@@ -1,0 +1,16 @@
+# Keep source-controlled text consistent across Windows, Linux, Docker and CI.
+* text=auto eol=lf
+
+# Native Windows command scripts may retain CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Explicit binary files.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

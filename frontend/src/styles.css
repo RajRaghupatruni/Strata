@@ -1,0 +1,484 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --strata-bg-1: #090c12;
+  --strata-bg-2: #111826;
+  --strata-bg-3: #1a2233;
+  --strata-panel: rgba(14, 20, 31, 0.82);
+  --strata-border: rgba(148, 163, 184, 0.16);
+  --strata-accent: #f5b947;
+  --strata-focus: #f8c966;
+  --strata-cool: #38bdf8;
+  --strata-success: #4ade80;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Manrope", sans-serif;
+  background: var(--strata-bg-1);
+  color: #f5f5f4;
+  text-rendering: geometricPrecision;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Sora", sans-serif;
+}
+
+.strata-background {
+  position: relative;
+  background:
+    radial-gradient(circle at 18% -8%, rgba(245, 185, 71, 0.24), transparent 32%),
+    radial-gradient(circle at 96% 0%, rgba(56, 189, 248, 0.2), transparent 34%),
+    linear-gradient(165deg, var(--strata-bg-1), var(--strata-bg-2));
+  overflow: hidden;
+}
+
+.strata-atmo {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(560px 320px at 10% 10%, rgba(245, 185, 71, 0.14), transparent 70%),
+    radial-gradient(460px 320px at 92% 0%, rgba(56, 189, 248, 0.14), transparent 72%),
+    radial-gradient(460px 260px at 52% 100%, rgba(74, 222, 128, 0.09), transparent 74%);
+  filter: blur(0.8px);
+  z-index: 0;
+}
+
+.strata-grid-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.8), transparent 84%);
+  z-index: 0;
+}
+
+.strata-card {
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--strata-border);
+  background: var(--strata-panel);
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
+  box-shadow:
+    inset 0 1px 0 rgba(245, 245, 245, 0.02),
+    0 12px 34px rgba(0, 0, 0, 0.26);
+}
+
+.strata-glass {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(155deg, rgba(245, 245, 245, 0.07), rgba(245, 245, 245, 0.02)),
+    rgba(18, 20, 24, 0.78);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 16px 34px rgba(0, 0, 0, 0.3);
+}
+
+.strata-gradient-text {
+  background: linear-gradient(135deg, #fef3c7 10%, #7dd3fc 55%, #86efac 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.strata-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.strata-hero::before {
+  content: "";
+  position: absolute;
+  inset: -20% 40% auto -20%;
+  height: 280px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.18), transparent 70%);
+  pointer-events: none;
+}
+
+.strata-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -18% -24% 45%;
+  height: 240px;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.16), transparent 70%);
+  pointer-events: none;
+}
+
+.strata-stat-tile {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(18, 20, 24, 0.72);
+  padding: 0.9rem;
+}
+
+.strata-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.strata-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.28rem 0.65rem;
+  font-size: 0.74rem;
+  color: #d6d3d1;
+}
+
+.strata-fade-in {
+  animation: strata-rise 280ms ease-out;
+}
+
+.strata-pill {
+  border: 1px solid rgba(245, 185, 71, 0.3);
+  background: rgba(245, 185, 71, 0.1);
+  color: #fef3c7;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+}
+
+.strata-site-title {
+  margin: 0.2rem 0 0;
+  font-size: 1.08rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #f8fafc;
+}
+
+.strata-brand-block {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.strata-brand-kicker {
+  margin: 0;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: #f8fafc;
+  font-family: "Sora", sans-serif;
+  font-weight: 700;
+}
+
+.strata-title-divider {
+  width: 1px;
+  height: 46px;
+  background: linear-gradient(
+    to bottom,
+    rgba(245, 185, 71, 0.1),
+    rgba(245, 185, 71, 0.72),
+    rgba(56, 189, 248, 0.72),
+    rgba(56, 189, 248, 0.1)
+  );
+}
+
+.strata-site-title-main {
+  margin: 0;
+  font-family: "Sora", sans-serif;
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #f8fafc;
+}
+
+.strata-site-title-sub {
+  margin: 0.12rem 0 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #94a3b8;
+}
+
+.strata-topbar {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(
+      140deg,
+      rgba(248, 250, 252, 0.12),
+      rgba(248, 250, 252, 0.03) 48%,
+      rgba(56, 189, 248, 0.06)
+    ),
+    rgba(12, 17, 27, 0.88);
+  backdrop-filter: blur(10px);
+  padding: 0.85rem 1rem;
+  box-shadow: 0 18px 34px rgba(3, 7, 18, 0.35);
+  min-height: 82px;
+}
+
+.strata-brand-centered {
+  justify-content: center;
+}
+
+.strata-brand-subline {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.strata-burger {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.72);
+  width: 34px;
+  height: 34px;
+  padding: 0 8px;
+}
+
+.strata-burger-float {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.strata-burger span {
+  width: 100%;
+  height: 2px;
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+.strata-sidebar {
+  position: sticky;
+  top: 5.8rem;
+  z-index: 10;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(10, 14, 23, 0.84);
+  backdrop-filter: blur(10px);
+  padding: 0.8rem;
+  max-height: calc(100vh - 7rem);
+  box-shadow: inset 0 1px 0 rgba(248, 250, 252, 0.08), 0 12px 30px rgba(2, 6, 23, 0.4);
+}
+
+.strata-sidebar-note {
+  margin-top: 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: linear-gradient(
+      170deg,
+      rgba(56, 189, 248, 0.1),
+      rgba(56, 189, 248, 0.02) 45%,
+      rgba(245, 185, 71, 0.08)
+    ),
+    rgba(15, 23, 42, 0.66);
+  padding: 0.75rem;
+}
+
+.strata-side-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  padding: 0.68rem 0.66rem;
+  transition: border-color 170ms ease, transform 170ms ease, background 170ms ease;
+}
+
+.strata-side-link:hover {
+  transform: translateY(-1px);
+}
+
+.strata-side-link-idle {
+  background: rgba(15, 23, 42, 0.44);
+  border-color: rgba(148, 163, 184, 0.1);
+  color: #cbd5e1;
+}
+
+.strata-side-link-active {
+  background: linear-gradient(145deg, rgba(245, 185, 71, 0.2), rgba(56, 189, 248, 0.16));
+  border-color: rgba(245, 185, 71, 0.44);
+  color: #f8fafc;
+}
+
+.strata-main-frame {
+  position: relative;
+  z-index: 1;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(10, 14, 23, 0.78);
+  box-shadow: inset 0 1px 0 rgba(248, 250, 252, 0.06), 0 18px 34px rgba(2, 6, 23, 0.32);
+  backdrop-filter: blur(10px);
+  padding: 1.1rem;
+}
+
+.strata-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(2, 6, 23, 0.72);
+}
+
+.strata-mobile-drawer {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: min(86vw, 320px);
+  z-index: 41;
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(10, 14, 23, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 0.9rem;
+  animation: strata-slide-in 220ms ease-out;
+}
+
+.strata-nav-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--strata-border);
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.86rem;
+  transition: transform 140ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.strata-nav-chip:hover {
+  transform: translateY(-1px);
+}
+
+.strata-nav-chip-idle {
+  background: rgba(28, 30, 36, 0.74);
+  color: #d6d3d1;
+}
+
+.strata-nav-chip-active {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #fef3c7;
+}
+
+.strata-kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom-width: 2px;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.35rem;
+  color: #d6d3d1;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  box-shadow: 0 0 0 2px var(--strata-focus);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(38, 38, 38, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.35);
+  border-radius: 999px;
+}
+
+@keyframes strata-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes strata-slide-in {
+  from {
+    transform: translateX(-14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 720px) {
+  .strata-topbar {
+    min-height: 72px;
+  }
+
+  .strata-title-divider {
+    height: 34px;
+  }
+
+  .strata-brand-kicker {
+    font-size: 1.1rem;
+    letter-spacing: 0.2em;
+  }
+
+  .strata-brand-subline {
+    font-size: 0.61rem;
+    letter-spacing: 0.14em;
+  }
+
+  .strata-nav-chip {
+    width: calc(50% - 0.5rem);
+    justify-content: space-between;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strata-fade-in,
+  .strata-nav-chip,
+  .strata-mobile-drawer,
+  .strata-side-link {
+    animation: none !important;
+    transition: none !important;
+  }
+}

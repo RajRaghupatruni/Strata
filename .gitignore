@@ -1,0 +1,59 @@
+# Local credentials (safe examples belong in the repository).
+.env
+.env.*
+!.env.example
+
+# Python environments, bytecode, packaging, and tool caches.
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.cache/
+
+# JavaScript dependencies and generated builds.
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Local application state.
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+
+# Test output and logs.
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+coverage.xml
+*.log
+logs/
+
+# Operating system and editor-local artifacts.
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.Trash-*/
+*~
+*.swp
+*.swo
+.idea/
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
