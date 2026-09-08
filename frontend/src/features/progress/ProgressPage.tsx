@@ -7,15 +7,30 @@ import {
   fetchProgressSnapshots,
   generateProgressSnapshot
 } from "../../services/api/client";
-import type { MetricChange, ProgressSnapshot } from "../../types/progress";
+import type { MetricChange, ProgressSnapshot, RecommendationEffectiveness } from "../../types/progress";
 
 const windows = [5, 10, 15, 20];
+
+type RecommendationLifecycleProps = {
+  recommendation: string;
+  rationale: string;
+  beforeEvidence: string;
+  actionStatus: string;
+  afterEvidence: string;
+  outcome: string;
+  details: MetricChange[];
+};
 
 function formatDate(value?: string | null): string {
   if (!value) return "N/A";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString();
+  return parsed.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
 }
 
 function formatDelta(value: number | null): string {
@@ -25,23 +40,92 @@ function formatDelta(value: number | null): string {
 }
 
 function directionClass(direction: string): string {
-  if (direction === "up") return "text-emerald-300";
-  if (direction === "down") return "text-red-300";
-  return "text-stone-300";
+  if (direction === "up") return "tone-positive";
+  if (direction === "down") return "tone-negative";
+  return "";
+}
+
+function metricName(metric: string): string {
+  return metric.replace(/_/g, " ");
 }
 
 function MetricDeltaCard({ metric }: { metric: MetricChange }) {
+  const changed = metric.delta !== null && metric.delta !== 0;
+
   return (
-    <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-      <p className="text-xs uppercase tracking-[0.15em] text-stone-400">{metric.metric}</p>
-      <p className={`mt-2 text-xl font-semibold ${directionClass(metric.direction)}`}>
+    <article className="surface-subtle p-4">
+      <p className="label">{metricName(metric.metric)}</p>
+      <p className={`metric-value metric-md mt-3 ${directionClass(metric.direction)}`}>
         {formatDelta(metric.delta)}
       </p>
-      <p className="mt-1 text-xs text-stone-400">
-        Recent {metric.recent ?? "N/A"} vs Previous {metric.previous ?? "N/A"}
+      <p className="section-copy">
+        Recent {metric.recent ?? "N/A"} vs previous {metric.previous ?? "N/A"}
       </p>
-    </div>
+      <div className="mt-4 progress-track">
+        <div className="progress-fill" style={{ width: changed ? "74%" : "42%" }} />
+      </div>
+    </article>
   );
+}
+
+function RecommendationLifecycle({
+  recommendation,
+  rationale,
+  beforeEvidence,
+  actionStatus,
+  afterEvidence,
+  outcome,
+  details
+}: RecommendationLifecycleProps) {
+  const steps = [
+    ["Recommendation", recommendation],
+    ["Why it was recommended", rationale],
+    ["Before evidence", beforeEvidence],
+    ["Player action / status", actionStatus],
+    ["After evidence", afterEvidence],
+    ["Outcome", outcome]
+  ];
+
+  return (
+    <section className="surface-strong panel-padding">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow">Recommendation lifecycle</p>
+          <h2 className="section-title mt-2">From coaching idea to measured outcome</h2>
+        </div>
+        <span className="chip chip-accent">Future contract ready</span>
+      </div>
+
+      <div className="workflow-line mt-6">
+        {steps.map(([title, body]) => (
+          <article key={title} className="workflow-step">
+            <p className="label">{title}</p>
+            <p className="mt-3 text-sm leading-6 text-[var(--text-soft)]">{body}</p>
+          </article>
+        ))}
+      </div>
+
+      {details.length > 0 && (
+        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {details.map((metric) => (
+            <MetricDeltaCard key={metric.metric} metric={metric} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function lifecycleFromEffectiveness(effectiveness?: RecommendationEffectiveness | null): RecommendationLifecycleProps {
+  return {
+    recommendation: effectiveness?.report_id ? `Legacy coaching report #${effectiveness.report_id}` : "Awaiting first-class recommendation data",
+    rationale: "Current UI reserves this step for the backend recommendation rationale once the final contract lands.",
+    beforeEvidence: `${effectiveness?.before_window_matches ?? 0} matches in the before window`,
+    actionStatus: effectiveness?.status ?? "Not evaluated",
+    afterEvidence: `${effectiveness?.after_window_matches ?? 0} matches in the after window`,
+    outcome: effectiveness?.note ?? "Generate more evidence to evaluate effectiveness.",
+    details: effectiveness?.details ?? []
+  };
 }
 
 export function ProgressPage() {
@@ -88,166 +172,139 @@ export function ProgressPage() {
   }
 
   return (
-    <section className="space-y-5">
+    <section className="page-stack">
       <PageHeader
-        eyebrow="Feedback Loop"
+        eyebrow="Progress loop"
         title="Progress"
-        description="Measure before-vs-after performance, issue recurrence drift, and coaching effectiveness."
+        description="Measure whether coaching changed actual performance, issue recurrence, and evidence quality over time."
       />
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-        <label className="text-sm text-stone-300" htmlFor="recent-window">
+      <div className="control-bar">
+        <label className="field-label w-44">
           Recent window
+          <select className="select" value={recentWindow} onChange={(event) => setRecentWindow(Number(event.target.value))}>
+            {windows.map((value) => (
+              <option key={`recent-${value}`} value={value}>Last {value} matches</option>
+            ))}
+          </select>
         </label>
-        <select
-          id="recent-window"
-          className="rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-          value={recentWindow}
-          onChange={(event) => setRecentWindow(Number(event.target.value))}
-        >
-          {windows.map((value) => (
-            <option key={`recent-${value}`} value={value}>
-              Last {value} matches
-            </option>
-          ))}
-        </select>
-        <label className="text-sm text-stone-300" htmlFor="previous-window">
+        <label className="field-label w-44">
           Previous window
+          <select className="select" value={previousWindow} onChange={(event) => setPreviousWindow(Number(event.target.value))}>
+            {windows.map((value) => (
+              <option key={`previous-${value}`} value={value}>Prior {value} matches</option>
+            ))}
+          </select>
         </label>
-        <select
-          id="previous-window"
-          className="rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-          value={previousWindow}
-          onChange={(event) => setPreviousWindow(Number(event.target.value))}
-        >
-          {windows.map((value) => (
-            <option key={`previous-${value}`} value={value}>
-              Prior {value} matches
-            </option>
-          ))}
-        </select>
-        <button
-          className="rounded bg-amber-200/20 px-4 py-2 text-sm text-amber-100 transition hover:bg-amber-200/30 disabled:opacity-50"
-          disabled={generating}
-          onClick={() => void onGenerate()}
-          type="button"
-        >
-          {generating ? "Generating..." : "Generate Progress Snapshot"}
+        <button className="button button-primary" disabled={generating} onClick={() => void onGenerate()} type="button">
+          {generating ? "Generating snapshot" : "Generate snapshot"}
         </button>
       </div>
 
-      {error && <StatePanel variant="error" title="Progress Error" description={error} />}
+      {error && <StatePanel variant="error" title="Progress is unavailable" description={error} />}
 
       {loading && (
         <StatePanel
           variant="loading"
-          title="Loading Progress Data"
-          description="Reading latest snapshots and recalculating comparison windows."
+          title="Loading progress evidence"
+          description="Reading latest snapshot, effectiveness state, issue drift, and historical snapshots."
         />
       )}
 
       {!loading && !latest && (
         <StatePanel
           variant="empty"
-          title="No Snapshot Yet"
-          description="Generate a snapshot to compare recent performance against prior matches."
+          title="No snapshot yet"
+          description="Generate a snapshot once there is enough before and after evidence to compare."
         />
       )}
 
       {!loading && latest && (
         <>
-          <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-            <p className="text-xs uppercase tracking-[0.15em] text-stone-400">Latest Snapshot</p>
-            <p className="mt-2 text-sm text-stone-300">
-              Snapshot #{latest.id} | {formatDate(latest.snapshot_date)} | Window{" "}
-              {latest.metric_window ?? "N/A"}
-            </p>
-            <p className="mt-2 text-sm text-stone-200">{latest.summary ?? "N/A"}</p>
+          <div className="surface panel-padding">
+            <p className="eyebrow">Latest snapshot</p>
+            <div className="mt-4 grid gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(320px,1.2fr)]">
+              <div>
+                <p className="metric-value metric-lg">#{latest.id}</p>
+                <p className="section-copy">{formatDate(latest.snapshot_date)} | {latest.metric_window ?? "N/A"}</p>
+              </div>
+              <p className="text-xl leading-9 text-[var(--text-soft)]">{latest.summary ?? "No summary generated."}</p>
+            </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="four-column">
             {latest.performance_change.map((metric) => (
               <MetricDeltaCard key={metric.metric} metric={metric} />
             ))}
           </div>
 
-          <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-            <h3 className="text-lg font-medium">Issue Recurrence Trend</h3>
+          <RecommendationLifecycle {...lifecycleFromEffectiveness(latest.recommendation_effectiveness)} />
+
+          <section className="surface panel-padding">
+            <p className="eyebrow">Issue recurrence</p>
+            <h2 className="section-title mt-2">Are the same mistakes appearing less often?</h2>
             {latest.issue_trends.length === 0 && (
-              <p className="mt-2 text-sm text-stone-400">No issue trend data yet.</p>
+              <p className="section-copy">No issue trend data yet.</p>
             )}
             {latest.issue_trends.length > 0 && (
-              <div className="mt-3 overflow-x-auto rounded border border-stone-700/60">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-stone-900/70 text-stone-300">
-                    <tr>
-                      <th className="px-3 py-2 font-medium">Category</th>
-                      <th className="px-3 py-2 font-medium">Recent</th>
-                      <th className="px-3 py-2 font-medium">Previous</th>
-                      <th className="px-3 py-2 font-medium">Delta</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {latest.issue_trends.map((trend) => (
-                      <tr key={trend.category} className="border-t border-stone-800">
-                        <td className="px-3 py-2">{trend.category}</td>
-                        <td className="px-3 py-2">{trend.recent_count}</td>
-                        <td className="px-3 py-2">{trend.previous_count}</td>
-                        <td className={`px-3 py-2 ${directionClass(trend.direction)}`}>
-                          {trend.delta > 0 ? "+" : ""}
-                          {trend.delta}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="data-list mt-5">
+                {latest.issue_trends.map((trend) => (
+                  <article key={trend.category} className="data-row p-4">
+                    <div className="grid gap-4 md:grid-cols-[1fr_100px_100px_100px] md:items-center">
+                      <div>
+                        <p className="text-base font-semibold text-[var(--text)]">{metricName(trend.category)}</p>
+                        <p className="section-copy">Recent vs previous tagged issue count.</p>
+                      </div>
+                      <div>
+                        <p className="label">Recent</p>
+                        <p className="metric-value text-xl">{trend.recent_count}</p>
+                      </div>
+                      <div>
+                        <p className="label">Previous</p>
+                        <p className="metric-value text-xl">{trend.previous_count}</p>
+                      </div>
+                      <div>
+                        <p className="label">Delta</p>
+                        <p className={`metric-value text-xl ${directionClass(trend.direction)}`}>
+                          {trend.delta > 0 ? "+" : ""}{trend.delta}
+                        </p>
+                      </div>
+                    </div>
+                  </article>
+                ))}
               </div>
             )}
-          </div>
-
-          <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-            <h3 className="text-lg font-medium">Recommendation Effectiveness</h3>
-            <p className="mt-2 text-sm text-stone-300">
-              Status: {latest.recommendation_effectiveness?.status ?? "N/A"} | Report: #
-              {latest.recommendation_effectiveness?.report_id ?? "N/A"}
-            </p>
-            <p className="mt-1 text-xs text-stone-400">
-              Before matches: {latest.recommendation_effectiveness?.before_window_matches ?? 0} |
-              After matches: {latest.recommendation_effectiveness?.after_window_matches ?? 0}
-            </p>
-            <p className="mt-2 text-sm text-stone-400">
-              {latest.recommendation_effectiveness?.note ?? "N/A"}
-            </p>
-          </div>
+          </section>
         </>
       )}
 
       {!loading && history.length > 0 && (
-        <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-          <h3 className="text-lg font-medium">Snapshot History</h3>
-          <div className="mt-3 overflow-x-auto rounded border border-stone-700/60">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-stone-900/70 text-stone-300">
+        <section className="surface panel-padding">
+          <p className="eyebrow">Snapshot history</p>
+          <h2 className="section-title mt-2">Evidence checkpoints</h2>
+          <div className="mt-5 overflow-x-auto">
+            <table className="fine-table">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2 font-medium">Snapshot</th>
-                  <th className="px-3 py-2 font-medium">Date</th>
-                  <th className="px-3 py-2 font-medium">Window</th>
-                  <th className="px-3 py-2 font-medium">Summary</th>
+                  <th>Snapshot</th>
+                  <th>Date</th>
+                  <th>Window</th>
+                  <th>Summary</th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((snapshot) => (
-                  <tr key={snapshot.id} className="border-t border-stone-800">
-                    <td className="px-3 py-2">#{snapshot.id}</td>
-                    <td className="px-3 py-2">{formatDate(snapshot.snapshot_date)}</td>
-                    <td className="px-3 py-2">{snapshot.metric_window ?? "N/A"}</td>
-                    <td className="px-3 py-2">{snapshot.summary ?? "N/A"}</td>
+                  <tr key={snapshot.id}>
+                    <td>#{snapshot.id}</td>
+                    <td>{formatDate(snapshot.snapshot_date)}</td>
+                    <td>{snapshot.metric_window ?? "N/A"}</td>
+                    <td>{snapshot.summary ?? "N/A"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       )}
     </section>
   );

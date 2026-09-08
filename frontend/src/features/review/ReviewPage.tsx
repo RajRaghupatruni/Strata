@@ -23,6 +23,7 @@ type ReviewFormState = {
 
 const noteTypes = ["post_match", "vod_review", "session_reflection", "other"];
 const severityOptions = ["", "low", "medium", "high", "critical"];
+const suggestedTags = ["first death", "utility timing", "spacing", "trade discipline", "post-plant", "retake path"];
 
 const emptyTagDraft: IssueTagInput = {
   category: "",
@@ -43,7 +44,12 @@ function formatDate(value?: string | null): string {
   if (!value) return "N/A";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString();
+  return parsed.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
 }
 
 function matchLabel(match: Match): string {
@@ -57,10 +63,95 @@ function parseMatchId(value: string): number | undefined {
   return parsed;
 }
 
+function humanize(value?: string | null): string {
+  if (!value) return "N/A";
+  return value.replace(/_/g, " ");
+}
+
+function severityClass(severity?: string | null): string {
+  if (severity === "critical" || severity === "high") return "chip-negative";
+  if (severity === "medium") return "chip-accent";
+  if (severity === "low") return "chip-positive";
+  return "";
+}
+
+function MatchContext({ match }: { match?: Match }) {
+  if (!match) {
+    return (
+      <div className="surface panel-padding">
+        <p className="eyebrow">Match context</p>
+        <h2 className="section-title mt-3">All reviews</h2>
+        <p className="section-copy">Pick a match when you want the review to inherit map, agent, score, and session context.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="surface panel-padding">
+      <p className="eyebrow">Match context</p>
+      <h2 className="section-title mt-3">{match.map_name ?? "Unknown map"} with {match.agent ?? "unknown agent"}</h2>
+      <p className="section-copy">{formatDate(match.played_at)}</p>
+      <div className="mt-5 grid grid-cols-3 gap-3 max-sm:grid-cols-1">
+        <div className="surface-subtle p-3">
+          <p className="label">Result</p>
+          <p className="metric-value text-xl">{humanize(match.result)}</p>
+        </div>
+        <div className="surface-subtle p-3">
+          <p className="label">KDA</p>
+          <p className="metric-value text-xl">{match.kills ?? "-"} / {match.deaths ?? "-"} / {match.assists ?? "-"}</p>
+        </div>
+        <div className="surface-subtle p-3">
+          <p className="label">Reviews</p>
+          <p className="metric-value text-xl">{match.review_note_count ?? 0}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IssueSummary({ issues }: { issues: RecurringIssue[] }) {
+  return (
+    <div className="surface panel-padding">
+      <p className="eyebrow">Recurring issues</p>
+      <h2 className="section-title mt-3">Patterns worth breaking</h2>
+      <div className="mt-5 data-list">
+        {issues.length === 0 && (
+          <StatePanel
+            variant="empty"
+            title="No repeated issue tags yet"
+            description="Tag a few reviews and this panel becomes the evidence source for coaching priority."
+          />
+        )}
+        {issues.map((issue) => (
+          <article key={issue.category} className="data-row p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-base font-semibold text-[var(--text)]">{humanize(issue.category)}</p>
+                <p className="section-copy">Last seen {formatDate(issue.last_seen_at)}</p>
+              </div>
+              <div className="text-right">
+                <p className="metric-value text-2xl">{issue.occurrences}</p>
+                <p className="label">occurrences</p>
+              </div>
+            </div>
+            <div className="mt-3 progress-track" aria-label={`${issue.high_severity_occurrences} high severity occurrences`}>
+              <div
+                className="progress-fill"
+                style={{ width: `${Math.min(100, (issue.high_severity_occurrences / Math.max(1, issue.occurrences)) * 100)}%` }}
+              />
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ReviewPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [notes, setNotes] = useState<ReviewNote[]>([]);
   const [recurringIssues, setRecurringIssues] = useState<RecurringIssue[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -70,6 +161,10 @@ export function ReviewPage() {
   const [tagDraft, setTagDraft] = useState<IssueTagInput>(emptyTagDraft);
 
   const selectedMatchId = useMemo(() => parseMatchId(filterMatchId), [filterMatchId]);
+  const selectedMatch = useMemo(
+    () => matches.find((match) => match.id === selectedMatchId),
+    [matches, selectedMatchId]
+  );
 
   async function loadData(matchId?: number) {
     setLoading(true);
@@ -125,6 +220,10 @@ export function ReviewPage() {
     setTagDraft(emptyTagDraft);
   }
 
+  function addSuggestedTag(category: string) {
+    setTagDraft((prev) => ({ ...prev, category }));
+  }
+
   function removeTag(index: number) {
     setForm((prev) => ({
       ...prev,
@@ -149,11 +248,14 @@ export function ReviewPage() {
 
     setSaving(true);
     setError(null);
+    setSuccess(null);
     try {
       if (editingNoteId) {
         await updateReviewNote(editingNoteId, payload);
+        setSuccess("Review note updated.");
       } else {
         await createReviewNote(payload);
+        setSuccess("Review note saved.");
       }
       resetForm();
       await loadData(selectedMatchId);
@@ -184,8 +286,10 @@ export function ReviewPage() {
   async function handleDelete(noteId: number) {
     if (!window.confirm("Delete this review note?")) return;
     setError(null);
+    setSuccess(null);
     try {
       await deleteReviewNote(noteId);
+      setSuccess("Review note deleted.");
       await loadData(selectedMatchId);
       if (editingNoteId === noteId) {
         resetForm();
@@ -196,39 +300,33 @@ export function ReviewPage() {
   }
 
   return (
-    <section className="space-y-5">
+    <section className="page-stack">
       <PageHeader
-        eyebrow="Review Workflow"
-        title="Review Workspace"
-        description="Capture match reflections, tag mistakes, and track what repeats most often."
+        eyebrow="Review workflow"
+        title="Review"
+        description="Turn raw match history into reusable coaching evidence: notes, mistakes, strengths, and issue tags."
       />
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-        <label className="text-sm text-stone-300" htmlFor="filter-match-id">
-          Filter by match
+      <div className="control-bar">
+        <label className="field-label min-w-[280px] flex-1">
+          Match filter
+          <select
+            className="select"
+            id="filter-match-id"
+            value={filterMatchId}
+            onChange={(event) => setFilterMatchId(event.target.value)}
+          >
+            <option value="">All matches</option>
+            {matches.map((match) => (
+              <option key={match.id} value={String(match.id)}>{matchLabel(match)}</option>
+            ))}
+          </select>
         </label>
-        <select
-          id="filter-match-id"
-          className="min-w-[280px] rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-          value={filterMatchId}
-          onChange={(event) => setFilterMatchId(event.target.value)}
-        >
-          <option value="">All matches</option>
-          {matches.map((match) => (
-            <option key={match.id} value={String(match.id)}>
-              {matchLabel(match)}
-            </option>
-          ))}
-        </select>
-        <button
-          className="rounded bg-amber-200/20 px-3 py-2 text-sm text-amber-100 transition hover:bg-amber-200/30"
-          type="button"
-          onClick={() => void loadData(selectedMatchId)}
-        >
-          Apply Filter
+        <button className="button button-secondary" type="button" onClick={() => void loadData(selectedMatchId)}>
+          Apply
         </button>
         <button
-          className="rounded bg-stone-700 px-3 py-2 text-sm text-stone-100 transition hover:bg-stone-600"
+          className="button button-secondary"
           type="button"
           onClick={() => {
             setFilterMatchId("");
@@ -239,248 +337,182 @@ export function ReviewPage() {
         </button>
       </div>
 
-      <form
-        className="space-y-3 rounded-lg border border-stone-700/60 bg-stone-900/40 p-4"
-        onSubmit={onSubmit}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">{editingNoteId ? "Edit Note" : "Add Review Note"}</h3>
-          {editingNoteId && (
-            <button
-              className="rounded bg-stone-700 px-3 py-1 text-xs text-stone-100 hover:bg-stone-600"
-              type="button"
-              onClick={resetForm}
-            >
-              Cancel Edit
-            </button>
-          )}
-        </div>
+      {error && <StatePanel variant="error" title="Review action failed" description={error} />}
+      {success && <StatePanel variant="success" title="Review updated" description={success} />}
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <select
-            className="rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-            value={form.matchId}
-            onChange={(event) => setForm((prev) => ({ ...prev, matchId: event.target.value }))}
-          >
-            <option value="">No match linked</option>
-            {matches.map((match) => (
-              <option key={match.id} value={String(match.id)}>
-                {matchLabel(match)}
-              </option>
-            ))}
-          </select>
-          <select
-            className="rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-            value={form.noteType}
-            onChange={(event) => setForm((prev) => ({ ...prev, noteType: event.target.value }))}
-          >
-            {noteTypes.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="two-column">
+        <div className="page-stack">
+          <MatchContext match={selectedMatch} />
 
-        <input
-          className="w-full rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-          placeholder="Summary (required)"
-          value={form.summary}
-          onChange={(event) => setForm((prev) => ({ ...prev, summary: event.target.value }))}
-        />
-
-        <textarea
-          className="min-h-[100px] w-full rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-          placeholder="Full review details"
-          value={form.fullNote}
-          onChange={(event) => setForm((prev) => ({ ...prev, fullNote: event.target.value }))}
-        />
-
-        <div className="rounded border border-stone-700/60 bg-stone-950/30 p-3">
-          <p className="mb-2 text-sm text-stone-300">Issue Tags</p>
-          <div className="grid gap-2 md:grid-cols-4">
-            <input
-              className="rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-              placeholder="Category (required)"
-              value={tagDraft.category ?? ""}
-              onChange={(event) =>
-                setTagDraft((prev) => ({ ...prev, category: event.target.value }))
-              }
-            />
-            <select
-              className="rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-              value={tagDraft.severity ?? ""}
-              onChange={(event) =>
-                setTagDraft((prev) => ({ ...prev, severity: event.target.value }))
-              }
-            >
-              {severityOptions.map((severity) => (
-                <option key={severity || "none"} value={severity}>
-                  {severity || "Severity"}
-                </option>
-              ))}
-            </select>
-            <input
-              className="rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-              placeholder="Round ref (e.g. 8A)"
-              value={tagDraft.round_reference ?? ""}
-              onChange={(event) =>
-                setTagDraft((prev) => ({ ...prev, round_reference: event.target.value }))
-              }
-            />
-            <button
-              className="rounded bg-stone-700 px-3 py-2 text-sm text-stone-100 hover:bg-stone-600"
-              onClick={addTagFromDraft}
-              type="button"
-            >
-              Add Tag
-            </button>
-          </div>
-          <input
-            className="mt-2 w-full rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-            placeholder="Tag description (optional)"
-            value={tagDraft.description ?? ""}
-            onChange={(event) =>
-              setTagDraft((prev) => ({ ...prev, description: event.target.value }))
-            }
-          />
-
-          {form.issueTags.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {form.issueTags.map((tag, index) => (
-                <span
-                  key={`${tag.category}-${index}`}
-                  className="inline-flex items-center gap-2 rounded bg-stone-700 px-2 py-1 text-xs text-stone-100"
-                >
-                  {tag.category}
-                  {tag.severity ? ` (${tag.severity})` : ""}
-                  <button
-                    className="text-red-200 hover:text-red-100"
-                    onClick={() => removeTag(index)}
-                    type="button"
-                  >
-                    x
-                  </button>
-                </span>
-              ))}
+          <form className="surface-strong panel-padding" onSubmit={onSubmit}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="eyebrow">Review note</p>
+                <h2 className="section-title mt-3">{editingNoteId ? "Refine the evidence" : "Capture the lesson"}</h2>
+              </div>
+              {editingNoteId && (
+                <button className="button button-secondary" type="button" onClick={resetForm}>
+                  Cancel edit
+                </button>
+              )}
             </div>
-          )}
-        </div>
 
-        <button
-          className="rounded bg-amber-200/20 px-4 py-2 text-sm text-amber-100 transition hover:bg-amber-200/30 disabled:opacity-50"
-          disabled={saving}
-          type="submit"
-        >
-          {saving ? "Saving..." : editingNoteId ? "Update Note" : "Save Note"}
-        </button>
-      </form>
-
-      {error && <StatePanel variant="error" title="Review Action Failed" description={error} />}
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-3 rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-          <h3 className="text-lg font-medium">Review Notes</h3>
-          {loading && (
-            <StatePanel
-              variant="loading"
-              title="Loading Notes"
-              description="Fetching your saved review notes and issue tags."
-            />
-          )}
-          {!loading && notes.length === 0 && (
-            <StatePanel
-              variant="empty"
-              title="No Notes For This Filter"
-              description="Create your first review note to start building recurring issue history."
-            />
-          )}
-          {!loading &&
-            notes.map((note) => (
-              <article key={note.id} className="rounded border border-stone-700/60 bg-stone-950/30 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-stone-100">{note.summary}</p>
-                    <p className="mt-1 text-xs text-stone-400">
-                      Note #{note.id} | Match {note.match_id ?? "None"} | {note.note_type ?? "other"} |{" "}
-                      {formatDate(note.created_at)}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="rounded bg-stone-700 px-2 py-1 text-xs text-stone-100 hover:bg-stone-600"
-                      onClick={() => startEdit(note)}
-                      type="button"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="rounded bg-red-700/50 px-2 py-1 text-xs text-red-100 hover:bg-red-600/60"
-                      onClick={() => void handleDelete(note.id)}
-                      type="button"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-                {note.full_note && <p className="mt-2 text-sm text-stone-300">{note.full_note}</p>}
-                {note.issue_tags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {note.issue_tags.map((tag) => (
-                      <span
-                        key={tag.id}
-                        className="rounded bg-stone-700 px-2 py-1 text-xs text-stone-100"
-                      >
-                        {tag.category}
-                        {tag.severity ? ` (${tag.severity})` : ""}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </article>
-            ))}
-        </div>
-
-        <div className="space-y-3 rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-          <h3 className="text-lg font-medium">Recurring Issues</h3>
-          {loading && (
-            <StatePanel
-              variant="loading"
-              title="Loading Issue Trends"
-              description="Grouping issue tags to surface your most repeated mistakes."
-            />
-          )}
-          {!loading && recurringIssues.length === 0 && (
-            <StatePanel
-              variant="empty"
-              title="No Recurring Issue Data"
-              description="Add issue tags to review notes and trends will appear here."
-            />
-          )}
-          {!loading && recurringIssues.length > 0 && (
-            <div className="overflow-x-auto rounded border border-stone-700/60">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-stone-900/70 text-stone-300">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Category</th>
-                    <th className="px-3 py-2 font-medium">Occurrences</th>
-                    <th className="px-3 py-2 font-medium">High Sev</th>
-                    <th className="px-3 py-2 font-medium">Last Seen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recurringIssues.map((issue) => (
-                    <tr key={issue.category} className="border-t border-stone-800">
-                      <td className="px-3 py-2">{issue.category}</td>
-                      <td className="px-3 py-2">{issue.occurrences}</td>
-                      <td className="px-3 py-2">{issue.high_severity_occurrences}</td>
-                      <td className="px-3 py-2">{formatDate(issue.last_seen_at)}</td>
-                    </tr>
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <label className="field-label">
+                Linked match
+                <select className="select" value={form.matchId} onChange={(event) => setForm((prev) => ({ ...prev, matchId: event.target.value }))}>
+                  <option value="">No match linked</option>
+                  {matches.map((match) => (
+                    <option key={match.id} value={String(match.id)}>{matchLabel(match)}</option>
                   ))}
-                </tbody>
-              </table>
+                </select>
+              </label>
+              <label className="field-label">
+                Review type
+                <select className="select" value={form.noteType} onChange={(event) => setForm((prev) => ({ ...prev, noteType: event.target.value }))}>
+                  {noteTypes.map((option) => (
+                    <option key={option} value={option}>{humanize(option)}</option>
+                  ))}
+                </select>
+              </label>
             </div>
-          )}
+
+            <label className="field-label mt-4">
+              Summary
+              <input
+                className="field"
+                placeholder="The one thing this match revealed"
+                value={form.summary}
+                onChange={(event) => setForm((prev) => ({ ...prev, summary: event.target.value }))}
+              />
+            </label>
+
+            <label className="field-label mt-4">
+              Strengths, mistakes, and context
+              <textarea
+                className="textarea"
+                placeholder="What worked, what cost rounds, and what you will test next session."
+                value={form.fullNote}
+                onChange={(event) => setForm((prev) => ({ ...prev, fullNote: event.target.value }))}
+              />
+            </label>
+
+            <div className="mt-4 surface-subtle p-4">
+              <p className="label">Issue tags</p>
+              <div className="chip-row mt-3">
+                {suggestedTags.map((tag) => (
+                  <button key={tag} className="chip" type="button" onClick={() => addSuggestedTag(tag)}>
+                    {tag}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-[1fr_150px_150px_auto]">
+                <input
+                  className="field"
+                  placeholder="Category"
+                  value={tagDraft.category ?? ""}
+                  onChange={(event) => setTagDraft((prev) => ({ ...prev, category: event.target.value }))}
+                />
+                <select className="select" value={tagDraft.severity ?? ""} onChange={(event) => setTagDraft((prev) => ({ ...prev, severity: event.target.value }))}>
+                  {severityOptions.map((severity) => (
+                    <option key={severity || "none"} value={severity}>{severity || "Severity"}</option>
+                  ))}
+                </select>
+                <input
+                  className="field"
+                  placeholder="Round ref"
+                  value={tagDraft.round_reference ?? ""}
+                  onChange={(event) => setTagDraft((prev) => ({ ...prev, round_reference: event.target.value }))}
+                />
+                <button className="button button-secondary" onClick={addTagFromDraft} type="button">
+                  Add tag
+                </button>
+              </div>
+              <input
+                className="field mt-3"
+                placeholder="Tag description"
+                value={tagDraft.description ?? ""}
+                onChange={(event) => setTagDraft((prev) => ({ ...prev, description: event.target.value }))}
+              />
+
+              {form.issueTags.length > 0 && (
+                <div className="chip-row mt-4">
+                  {form.issueTags.map((tag, index) => (
+                    <span key={`${tag.category}-${index}`} className={`chip ${severityClass(tag.severity)}`}>
+                      {tag.category}
+                      {tag.severity ? ` / ${tag.severity}` : ""}
+                      <button className="border-0 bg-transparent text-inherit" onClick={() => removeTag(index)} type="button" aria-label={`Remove ${tag.category}`}>
+                        x
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button className="button button-primary" disabled={saving} type="submit">
+                {saving ? "Saving" : editingNoteId ? "Update note" : "Save note"}
+              </button>
+              <p className="microcopy">Good reviews are short, specific, and reusable by the coaching layer.</p>
+            </div>
+          </form>
+        </div>
+
+        <div className="page-stack">
+          <IssueSummary issues={recurringIssues} />
+
+          <div className="surface panel-padding">
+            <p className="eyebrow">Saved notes</p>
+            {loading && (
+              <StatePanel
+                variant="loading"
+                title="Loading notes"
+                description="Fetching review notes and tag history for the selected scope."
+              />
+            )}
+            {!loading && notes.length === 0 && (
+              <div className="mt-4">
+                <StatePanel
+                  variant="empty"
+                  title="No notes for this filter"
+                  description="Create a review note to start building an evidence trail."
+                />
+              </div>
+            )}
+            {!loading && notes.length > 0 && (
+              <div className="data-list mt-4">
+                {notes.map((note) => (
+                  <article key={note.id} className="data-row p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-semibold text-[var(--text)]">{note.summary}</p>
+                        <p className="section-copy">
+                          Note #{note.id} | Match {note.match_id ?? "None"} | {humanize(note.note_type)} | {formatDate(note.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button className="button button-secondary min-h-0 px-3 py-1" onClick={() => startEdit(note)} type="button">Edit</button>
+                        <button className="button button-danger min-h-0 px-3 py-1" onClick={() => void handleDelete(note.id)} type="button">Delete</button>
+                      </div>
+                    </div>
+                    {note.full_note && <p className="mt-3 text-sm leading-6 text-[var(--text-soft)]">{note.full_note}</p>}
+                    {note.issue_tags.length > 0 && (
+                      <div className="chip-row mt-3">
+                        {note.issue_tags.map((tag) => (
+                          <span key={tag.id} className={`chip ${severityClass(tag.severity)}`}>
+                            {tag.category}
+                            {tag.severity ? ` / ${tag.severity}` : ""}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>

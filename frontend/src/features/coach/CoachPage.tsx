@@ -16,46 +16,54 @@ function formatDate(value?: string | null): string {
   if (!value) return "N/A";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString();
+  return parsed.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
 }
 
-function TextBlock({ title, value }: { title: string; value?: string | null }) {
+function TextBlock({ title, value, emphasis = false }: { title: string; value?: string | null; emphasis?: boolean }) {
   return (
-    <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-      <p className="text-xs uppercase tracking-[0.15em] text-stone-400">{title}</p>
-      <p className="mt-2 text-sm text-stone-200 whitespace-pre-line">{value || "N/A"}</p>
+    <div className={emphasis ? "surface-strong panel-padding" : "surface-subtle p-4"}>
+      <p className="label">{title}</p>
+      <p className={`${emphasis ? "mt-4 text-2xl leading-9" : "mt-3 text-sm leading-6"} whitespace-pre-line text-[var(--text-soft)]`}>
+        {value || "N/A"}
+      </p>
     </div>
   );
 }
 
 function ListBlock({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-      <p className="text-xs uppercase tracking-[0.15em] text-stone-400">{title}</p>
-      {items.length === 0 && <p className="mt-2 text-sm text-stone-400">No items generated.</p>}
+    <div className="surface-subtle p-4">
+      <p className="label">{title}</p>
+      {items.length === 0 && <p className="section-copy">No items generated.</p>}
       {items.length > 0 && (
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-stone-200">
+        <div className="mt-3 grid gap-2">
           {items.map((item, index) => (
-            <li key={`${title}-${index}`}>{item}</li>
+            <p key={`${title}-${index}`} className="rounded-[8px] border border-[var(--divider)] bg-black/10 px-3 py-2 text-sm leading-6 text-[var(--text-soft)]">
+              {item}
+            </p>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
 }
 
 function ScoreBar({ label, score }: { label: string; score: number }) {
+  const width = `${Math.max(0, Math.min(score, 100))}%`;
+
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs text-stone-300">
-        <span className="capitalize">{label}</span>
-        <span>{score.toFixed(1)}</span>
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="label">{label.replace(/_/g, " ")}</p>
+        <p className="metric-value text-lg">{score.toFixed(1)}</p>
       </div>
-      <div className="h-2 rounded bg-stone-800">
-        <div
-          className="h-2 rounded bg-gradient-to-r from-amber-500/80 to-emerald-400/80"
-          style={{ width: `${Math.max(0, Math.min(score, 100))}%` }}
-        />
+      <div className="progress-track mt-2">
+        <div className="progress-fill" style={{ width }} />
       </div>
     </div>
   );
@@ -113,10 +121,7 @@ export function CoachPage() {
     try {
       const parsedMatchId = Number(proMatchId);
       const hasMatchId = Number.isFinite(parsedMatchId) && parsedMatchId > 0;
-      const result = await generateProCoachingBrief(
-        recentWindow,
-        hasMatchId ? parsedMatchId : undefined
-      );
+      const result = await generateProCoachingBrief(recentWindow, hasMatchId ? parsedMatchId : undefined);
       setProBrief(result);
     } catch (err) {
       setProError(err instanceof Error ? err.message : "Failed to generate pro coaching brief");
@@ -146,240 +151,209 @@ export function CoachPage() {
     const value = latest?.supporting_data?.ai_metadata;
     return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
   }, [latest]);
+
   const generationMode = useMemo(() => {
     const mode = latest?.supporting_data?.generation_mode;
     return typeof mode === "string" ? mode : "deterministic";
   }, [latest]);
 
   return (
-    <section className="space-y-5">
+    <section className="page-stack">
       <PageHeader
-        eyebrow="Coaching Layer"
+        eyebrow="Evidence-led coaching"
         title="Coach"
-        description="Generate professional-grade coaching from your match history, including direct feedback, role fit, and optional single-game deep dissection."
+        description="Strata translates deterministic match and review signals into a clear next-session plan. AI refinement stays optional and secondary."
+        rightSlot={
+          <div className="segmented" aria-label="Coaching window">
+            {windows.map((value) => (
+              <button
+                key={value}
+                className={`segment ${recentWindow === value ? "segment-active" : ""}`}
+                type="button"
+                onClick={() => setRecentWindow(value)}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+        }
       />
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-        <label className="text-sm text-stone-300" htmlFor="recent-window">
-          Coaching window
-        </label>
-        <select
-          id="recent-window"
-          className="rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-          value={recentWindow}
-          onChange={(event) => setRecentWindow(Number(event.target.value))}
-        >
-          {windows.map((value) => (
-            <option key={value} value={value}>
-              Last {value} matches
-            </option>
-          ))}
-        </select>
-        <button
-          className="rounded bg-amber-200/20 px-4 py-2 text-sm text-amber-100 transition hover:bg-amber-200/30 disabled:opacity-50"
-          disabled={generating}
-          onClick={() => void onGenerate()}
-          type="button"
-        >
-          {generating ? "Generating..." : "Generate Coaching Report"}
+      <div className="control-bar">
+        <button className="button button-primary" disabled={generating} onClick={() => void onGenerate()} type="button">
+          {generating ? "Generating report" : "Generate coaching report"}
         </button>
+        <span className="chip chip-accent">Window: last {recentWindow} matches</span>
+        <span className="chip">Mode: {generationMode}</span>
+        <span className="chip">AI used: {Boolean(aiMetadata?.used_ai) ? "yes" : "no"}</span>
       </div>
 
-      <div className="space-y-3 rounded-lg border border-cyan-400/30 bg-cyan-500/10 p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="text-sm text-cyan-100" htmlFor="pro-match-id">
-            Optional specific match ID
-          </label>
-          <input
-            id="pro-match-id"
-            className="w-28 rounded border border-cyan-300/30 bg-slate-900/60 px-3 py-2 text-sm text-cyan-50"
-            placeholder="e.g. 42"
-            value={proMatchId}
-            onChange={(event) => setProMatchId(event.target.value)}
-          />
-          <button
-            className="rounded bg-cyan-200/20 px-4 py-2 text-sm text-cyan-100 transition hover:bg-cyan-200/30 disabled:opacity-50"
-            disabled={proGenerating}
-            onClick={() => void onGenerateProBrief()}
-            type="button"
-          >
-            {proGenerating ? "Generating Pro Brief..." : "Generate Pro Coaching Brief"}
-          </button>
-        </div>
-        <p className="text-xs text-cyan-50/80">
-          Creates a personal, direct coaching breakdown: strengths, role fit, harsh truths,
-          priority improvements, and optional one-game deep dissection.
-        </p>
-      </div>
-
-      {error && <StatePanel variant="error" title="Coaching Error" description={error} />}
-      {proError && <StatePanel variant="error" title="Pro Coaching Error" description={proError} />}
+      {error && <StatePanel variant="error" title="Coaching is unavailable" description={error} />}
+      {proError && <StatePanel variant="error" title="Pro brief failed" description={proError} />}
 
       {loading && (
         <StatePanel
           variant="loading"
-          title="Loading Coaching Reports"
-          description="Reading latest recommendations and recent report history."
+          title="Reading coaching evidence"
+          description="Loading priority issue, action plan, recurring tags, assessment vector, and report history."
         />
       )}
 
       {!loading && !latest && (
         <StatePanel
           variant="empty"
-          title="No Coaching Report Yet"
-          description="Generate your first report to unlock priority issue, stop/keep actions, and weekly plan."
+          title="No coaching report yet"
+          description="Generate your first report to unlock priority issue, stop/keep/improve actions, and a next-session plan."
         />
       )}
 
       {!loading && latest && (
         <>
-          <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-            <p className="text-xs uppercase tracking-[0.15em] text-stone-400">Latest Report</p>
-            <p className="mt-2 text-sm text-stone-300">
-              Generated: {formatDate(latest.generated_at)} | Window:{" "}
-              {formatDate(latest.time_window_start)} {" -> "} {formatDate(latest.time_window_end)}
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <TextBlock title="Priority Issue" value={latest.priority_issue} />
-            <TextBlock title="Stop Doing" value={latest.stop_doing} />
-            <TextBlock title="Keep Doing" value={latest.keep_doing} />
-            <TextBlock title="Improve Next" value={latest.improve_next} />
-            <TextBlock title="Next Session Focus" value={latest.next_session_focus} />
-            <TextBlock title="Weekly Plan" value={latest.weekly_plan} />
-          </div>
-
-          <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-            <h3 className="text-lg font-medium">Top Recurring Issues Used In Coaching</h3>
-            {topIssues.length === 0 && (
-              <p className="mt-2 text-sm text-stone-400">No recurring issue tags found.</p>
-            )}
-            {topIssues.length > 0 && (
-              <div className="mt-3 overflow-x-auto rounded border border-stone-700/60">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-stone-900/70 text-stone-300">
-                    <tr>
-                      <th className="px-3 py-2 font-medium">Category</th>
-                      <th className="px-3 py-2 font-medium">Occurrences</th>
-                      <th className="px-3 py-2 font-medium">High Severity</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topIssues.map((issue, index) => (
-                      <tr key={index} className="border-t border-stone-800">
-                        <td className="px-3 py-2">{String((issue as { category?: string }).category ?? "N/A")}</td>
-                        <td className="px-3 py-2">
-                          {String((issue as { occurrences?: number }).occurrences ?? 0)}
-                        </td>
-                        <td className="px-3 py-2">
-                          {String(
-                            (issue as { high_severity_occurrences?: number })
-                              .high_severity_occurrences ?? 0
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div className="surface-strong panel-padding">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
+              <div>
+                <p className="eyebrow">Current priority</p>
+                <h2 className="mt-4 max-w-4xl text-[clamp(2.4rem,5vw,5.3rem)] font-[720] leading-[0.95] tracking-[0] text-[var(--text)]">
+                  {latest.priority_issue || "No priority issue generated"}
+                </h2>
+                <p className="section-copy mt-5">
+                  Generated {formatDate(latest.generated_at)} from {formatDate(latest.time_window_start)} to {formatDate(latest.time_window_end)}.
+                </p>
               </div>
-            )}
+              <TextBlock title="Next session plan" value={latest.next_session_focus} emphasis />
+            </div>
           </div>
 
-          <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-            <h3 className="text-lg font-medium">Smart Assessment Vector</h3>
-            {Object.keys(assessmentDimensions).length === 0 && (
-              <p className="mt-2 text-sm text-stone-400">Assessment data unavailable in this report.</p>
-            )}
-            {Object.keys(assessmentDimensions).length > 0 && (
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                {Object.entries(assessmentDimensions).map(([label, score]) => (
-                  <ScoreBar key={label} label={label} score={score} />
-                ))}
-              </div>
-            )}
-            <p className="mt-3 text-xs text-stone-500">
-              Generation mode: {generationMode} | AI used:{" "}
-              {Boolean(aiMetadata?.used_ai) ? "yes" : "no"}
-            </p>
+          <div className="three-column">
+            <TextBlock title="Stop" value={latest.stop_doing} />
+            <TextBlock title="Keep" value={latest.keep_doing} />
+            <TextBlock title="Improve" value={latest.improve_next} />
           </div>
+
+          <div className="two-column">
+            <section className="surface panel-padding">
+              <p className="eyebrow">Rationale</p>
+              <h2 className="section-title mt-2">Evidence used by the report</h2>
+              {topIssues.length === 0 && <p className="section-copy">No recurring issue tags were available for this report.</p>}
+              {topIssues.length > 0 && (
+                <div className="data-list mt-5">
+                  {topIssues.map((issue, index) => (
+                    <article key={index} className="data-row p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-base font-semibold text-[var(--text)]">
+                            {String((issue as { category?: string }).category ?? "Unlabeled issue")}
+                          </p>
+                          <p className="section-copy">Recurring issue tag surfaced from review history.</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="metric-value text-2xl">{String((issue as { occurrences?: number }).occurrences ?? 0)}</p>
+                          <p className="label">seen</p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="surface panel-padding">
+              <p className="eyebrow">Smart assessment vector</p>
+              <h2 className="section-title mt-2">Where the profile is strong or fragile</h2>
+              {Object.keys(assessmentDimensions).length === 0 && (
+                <p className="section-copy">Assessment data unavailable in this report.</p>
+              )}
+              {Object.keys(assessmentDimensions).length > 0 && (
+                <div className="mt-5 grid gap-4">
+                  {Object.entries(assessmentDimensions).map(([label, score]) => (
+                    <ScoreBar key={label} label={label} score={score} />
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+
+          <TextBlock title="Weekly plan" value={latest.weekly_plan} />
         </>
       )}
 
       {!loading && history.length > 0 && (
-        <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-          <h3 className="text-lg font-medium">Coaching History</h3>
-          <div className="mt-3 overflow-x-auto rounded border border-stone-700/60">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-stone-900/70 text-stone-300">
+        <section className="surface panel-padding">
+          <p className="eyebrow">History</p>
+          <h2 className="section-title mt-2">Coaching reports over time</h2>
+          <div className="mt-5 overflow-x-auto">
+            <table className="fine-table">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2 font-medium">Report</th>
-                  <th className="px-3 py-2 font-medium">Generated</th>
-                  <th className="px-3 py-2 font-medium">Priority Snapshot</th>
+                  <th>Report</th>
+                  <th>Generated</th>
+                  <th>Priority snapshot</th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((report) => (
-                  <tr key={report.id} className="border-t border-stone-800">
-                    <td className="px-3 py-2">#{report.id}</td>
-                    <td className="px-3 py-2">{formatDate(report.generated_at)}</td>
-                    <td className="px-3 py-2">{report.priority_issue ?? "N/A"}</td>
+                  <tr key={report.id}>
+                    <td>#{report.id}</td>
+                    <td>{formatDate(report.generated_at)}</td>
+                    <td>{report.priority_issue ?? "N/A"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       )}
 
-      {proBrief && (
-        <div className="space-y-4 rounded-lg border border-cyan-300/40 bg-slate-900/50 p-4">
+      <section className="surface panel-padding">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.15em] text-cyan-200">Pro Coaching Brief</p>
-            <p className="mt-1 text-sm text-stone-300">
-              Generated: {formatDate(proBrief.generated_at)} | Window: last{" "}
-              {proBrief.recent_window} matches
+            <p className="eyebrow">Optional refinement</p>
+            <h2 className="section-title mt-2">Pro coaching brief</h2>
+            <p className="section-copy">
+              A secondary layer for direct narrative coaching. The product still works without AI credentials.
             </p>
           </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <TextBlock title="Profile Focus" value={proBrief.profile_focus} />
-            <TextBlock title="Best Role Fit" value={proBrief.best_role_fit} />
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="field-label w-36">
+              Match ID
+              <input className="field" placeholder="Optional" value={proMatchId} onChange={(event) => setProMatchId(event.target.value)} />
+            </label>
+            <button className="button button-secondary" disabled={proGenerating} onClick={() => void onGenerateProBrief()} type="button">
+              {proGenerating ? "Generating" : "Generate brief"}
+            </button>
           </div>
+        </div>
+      </section>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <ListBlock title="What You Do Well" items={proBrief.what_you_do_well} />
-            <ListBlock title="What Is Holding You Back" items={proBrief.what_is_holding_you_back} />
-            <ListBlock title="Harsh Truths" items={proBrief.harsh_truths} />
-            <ListBlock title="Priority Improvements" items={proBrief.priority_improvements} />
-            <ListBlock title="Next Match Plan" items={proBrief.next_match_plan} />
-            <ListBlock title="Weekly Program" items={proBrief.weekly_program} />
+      {proBrief && (
+        <section className="surface panel-padding">
+          <p className="eyebrow">Pro brief</p>
+          <h2 className="section-title mt-2">Generated {formatDate(proBrief.generated_at)}</h2>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <TextBlock title="Profile focus" value={proBrief.profile_focus} />
+            <TextBlock title="Best role fit" value={proBrief.best_role_fit} />
+            <ListBlock title="What you do well" items={proBrief.what_you_do_well} />
+            <ListBlock title="What is holding you back" items={proBrief.what_is_holding_you_back} />
+            <ListBlock title="Harsh truths" items={proBrief.harsh_truths} />
+            <ListBlock title="Priority improvements" items={proBrief.priority_improvements} />
+            <ListBlock title="Next match plan" items={proBrief.next_match_plan} />
+            <ListBlock title="Weekly program" items={proBrief.weekly_program} />
           </div>
-
-          <ListBlock title="Evidence Points" items={proBrief.evidence_points} />
-
+          <div className="mt-4">
+            <ListBlock title="Evidence points" items={proBrief.evidence_points} />
+          </div>
           {proBrief.specific_game_breakdown && (
-            <div className="rounded-lg border border-cyan-300/35 bg-slate-900/60 p-4">
-              <p className="text-xs uppercase tracking-[0.15em] text-cyan-200">
-                Specific Game Breakdown (Match #{proBrief.specific_game_breakdown.match_id})
-              </p>
-              <p className="mt-2 text-sm text-stone-200">
-                {proBrief.specific_game_breakdown.summary}
-              </p>
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <ListBlock title="Did Well" items={proBrief.specific_game_breakdown.did_well} />
-                <ListBlock
-                  title="Cost You Rounds"
-                  items={proBrief.specific_game_breakdown.cost_you_rounds}
-                />
-                <ListBlock
-                  title="Fix Next Time"
-                  items={proBrief.specific_game_breakdown.fix_next_time}
-                />
+            <div className="mt-4 surface-subtle p-4">
+              <p className="label">Specific game breakdown: match #{proBrief.specific_game_breakdown.match_id}</p>
+              <p className="mt-3 text-sm leading-6 text-[var(--text-soft)]">{proBrief.specific_game_breakdown.summary}</p>
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <ListBlock title="Did well" items={proBrief.specific_game_breakdown.did_well} />
+                <ListBlock title="Cost rounds" items={proBrief.specific_game_breakdown.cost_you_rounds} />
+                <ListBlock title="Fix next time" items={proBrief.specific_game_breakdown.fix_next_time} />
               </div>
             </div>
           )}
-        </div>
+        </section>
       )}
     </section>
   );

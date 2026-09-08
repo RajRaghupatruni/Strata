@@ -3,17 +3,17 @@ import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/PageHeader";
 import { StatePanel } from "../../components/StatePanel";
 import { fetchInsights } from "../../services/api/client";
-import type { BreakdownEntry, InsightsResponse } from "../../types/insights";
+import type { BreakdownEntry, InsightsResponse, MetricDelta } from "../../types/insights";
 
 const windows = [5, 10, 15, 20];
 
 const metricLabels: Record<string, string> = {
-  win_rate: "Win Rate",
-  avg_acs: "Avg ACS",
-  avg_adr: "Avg ADR",
-  avg_kda: "Avg KDA",
-  avg_hs_percent: "Avg HS%",
-  avg_rr_change: "Avg RR Change"
+  win_rate: "Win rate",
+  avg_acs: "Average ACS",
+  avg_adr: "Average ADR",
+  avg_kda: "Average KDA",
+  avg_hs_percent: "Headshot rate",
+  avg_rr_change: "RR change"
 };
 
 function formatNumber(value: number | null, suffix = ""): string {
@@ -21,57 +21,111 @@ function formatNumber(value: number | null, suffix = ""): string {
   return `${value.toFixed(2)}${suffix}`;
 }
 
-function directionColor(direction: string): string {
-  if (direction === "up") return "text-emerald-300";
-  if (direction === "down") return "text-red-300";
-  return "text-stone-300";
+function formatCompact(value: number | null): string {
+  if (value === null || Number.isNaN(value)) return "N/A";
+  return value.toFixed(value >= 100 ? 0 : 1);
 }
 
-function directionPrefix(value: number | null): string {
-  if (value === null) return "";
+function directionClass(direction: string): string {
+  if (direction === "up") return "tone-positive";
+  if (direction === "down") return "tone-negative";
+  return "";
+}
+
+function directionCopy(row: MetricDelta): string {
+  if (row.direction === "up") return "Improving";
+  if (row.direction === "down") return "Declining";
+  return "Stable";
+}
+
+function deltaPrefix(value: number | null): string {
+  if (value === null || value === 0) return "";
   return value > 0 ? "+" : "";
 }
 
-function BreakdownTable({ title, rows }: { title: string; rows: BreakdownEntry[] }) {
-  if (rows.length === 0) {
-    return (
-      <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-        <h3 className="text-lg font-medium">{title}</h3>
-        <p className="mt-2 text-sm text-stone-400">No data yet.</p>
-      </div>
-    );
-  }
+function InsightMetric({ label, value, subtext }: { label: string; value: string; subtext: string }) {
+  return (
+    <div className="surface-subtle p-4">
+      <p className="label">{label}</p>
+      <p className="metric-value metric-md mt-3">{value}</p>
+      <p className="section-copy">{subtext}</p>
+    </div>
+  );
+}
+
+function TrendCard({ row }: { row: MetricDelta }) {
+  const width = row.recent === null || row.baseline === null ? 50 : Math.min(100, Math.max(8, (row.recent / Math.max(row.baseline, row.recent, 1)) * 100));
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-stone-700/60">
-      <h3 className="border-b border-stone-700/60 bg-stone-900/70 px-4 py-3 text-lg font-medium">
-        {title}
-      </h3>
-      <table className="min-w-full text-left text-sm">
-        <thead className="bg-stone-900/60 text-stone-300">
-          <tr>
-            <th className="px-3 py-2 font-medium">Label</th>
-            <th className="px-3 py-2 font-medium">Matches</th>
-            <th className="px-3 py-2 font-medium">Win Rate</th>
-            <th className="px-3 py-2 font-medium">Avg ACS</th>
-            <th className="px-3 py-2 font-medium">Avg ADR</th>
-            <th className="px-3 py-2 font-medium">Avg KDA</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.label} className="border-t border-stone-800">
-              <td className="px-3 py-2">{row.label}</td>
-              <td className="px-3 py-2">{row.matches}</td>
-              <td className="px-3 py-2">{formatNumber(row.win_rate, "%")}</td>
-              <td className="px-3 py-2">{formatNumber(row.avg_acs)}</td>
-              <td className="px-3 py-2">{formatNumber(row.avg_adr)}</td>
-              <td className="px-3 py-2">{formatNumber(row.avg_kda)}</td>
-            </tr>
+    <article className="surface-subtle p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="label">{metricLabels[row.metric] ?? row.metric}</p>
+          <p className={`mt-2 text-xl font-semibold ${directionClass(row.direction)}`}>{directionCopy(row)}</p>
+        </div>
+        <p className={`metric-value text-2xl ${directionClass(row.direction)}`}>
+          {deltaPrefix(row.delta)}{formatCompact(row.delta)}
+        </p>
+      </div>
+      <div className="mt-4 progress-track" aria-label={`${metricLabels[row.metric] ?? row.metric} trend`}>
+        <div className="progress-fill" style={{ width: `${width}%` }} />
+      </div>
+      <p className="section-copy">
+        Recent {formatCompact(row.recent)} vs baseline {formatCompact(row.baseline)}
+      </p>
+    </article>
+  );
+}
+
+function BreakdownSection({ title, question, rows }: { title: string; question: string; rows: BreakdownEntry[] }) {
+  const sortedRows = [...rows].sort((a, b) => (b.matches ?? 0) - (a.matches ?? 0)).slice(0, 8);
+
+  return (
+    <section className="surface panel-padding">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow">{title}</p>
+          <h2 className="section-title mt-2">{question}</h2>
+        </div>
+        <span className="chip">{rows.length} groups</span>
+      </div>
+
+      {sortedRows.length === 0 && (
+        <div className="mt-5">
+          <StatePanel variant="empty" title="Not enough evidence" description="Import more matches to make this breakdown useful." />
+        </div>
+      )}
+
+      {sortedRows.length > 0 && (
+        <div className="mt-5 data-list">
+          {sortedRows.map((row) => (
+            <article key={row.label} className="data-row p-4">
+              <div className="grid gap-4 md:grid-cols-[1fr_120px_120px_120px] md:items-center">
+                <div>
+                  <p className="text-base font-semibold text-[var(--text)]">{row.label}</p>
+                  <p className="section-copy">{row.matches} matches</p>
+                  <div className="mt-3 progress-track" aria-label={`${row.label} win rate ${formatNumber(row.win_rate, "%")}`}>
+                    <div className="progress-fill" style={{ width: `${Math.min(100, Math.max(0, row.win_rate ?? 0))}%` }} />
+                  </div>
+                </div>
+                <div>
+                  <p className="label">Win rate</p>
+                  <p className="metric-value text-xl">{formatNumber(row.win_rate, "%")}</p>
+                </div>
+                <div>
+                  <p className="label">ACS</p>
+                  <p className="metric-value text-xl">{formatCompact(row.avg_acs)}</p>
+                </div>
+                <div>
+                  <p className="label">KDA</p>
+                  <p className="metric-value text-xl">{formatCompact(row.avg_kda)}</p>
+                </div>
+              </div>
+            </article>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -91,9 +145,7 @@ export function InsightsPage() {
         const data = await fetchInsights(recentWindow);
         if (active) setInsights(data);
       } catch (err) {
-        if (active) {
-          setError(err instanceof Error ? err.message : "Unknown error");
-        }
+        if (active) setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         if (active) setLoading(false);
       }
@@ -106,114 +158,88 @@ export function InsightsPage() {
   }, [recentWindow]);
 
   const trendRows = useMemo(() => insights?.trend_summary.comparisons ?? [], [insights]);
+  const strongestTrend = useMemo(
+    () => trendRows.find((row) => row.direction === "up") ?? trendRows[0],
+    [trendRows]
+  );
 
   return (
-    <section className="space-y-5">
+    <section className="page-stack">
       <PageHeader
-        eyebrow="Analysis Engine"
+        eyebrow="Deterministic analytics"
         title="Insights"
-        description="Track recent form, trend deltas, and stable strengths across maps, agents, and roles."
+        description="Every visualization answers a practical question about improvement, map cost, agent fit, or stability."
+        rightSlot={
+          <div className="segmented" aria-label="Recent match window">
+            {windows.map((windowSize) => (
+              <button
+                key={windowSize}
+                className={`segment ${recentWindow === windowSize ? "segment-active" : ""}`}
+                type="button"
+                onClick={() => setRecentWindow(windowSize)}
+              >
+                {windowSize}
+              </button>
+            ))}
+          </div>
+        }
       />
-
-      <div className="flex items-center gap-3">
-        <label className="text-sm text-stone-300" htmlFor="window">
-          Recent window
-        </label>
-        <select
-          id="window"
-          className="rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-          value={recentWindow}
-          onChange={(event) => setRecentWindow(Number(event.target.value))}
-        >
-          {windows.map((windowSize) => (
-            <option key={windowSize} value={windowSize}>
-              Last {windowSize} matches
-            </option>
-          ))}
-        </select>
-      </div>
 
       {loading && (
         <StatePanel
           variant="loading"
-          title="Crunching Match Insights"
-          description="Computing trends, volatility, and breakdowns from your local match data."
+          title="Computing insight signals"
+          description="Comparing recent performance against baseline, then grouping evidence by map, agent, and role."
         />
       )}
 
-      {error && <StatePanel variant="error" title="Insights Error" description={error} />}
+      {error && <StatePanel variant="error" title="Insights are unavailable" description={error} />}
 
       {!loading && !error && insights && (
         <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-              <p className="text-xs uppercase tracking-[0.15em] text-stone-400">Recent Win Rate</p>
-              <p className="mt-2 text-2xl font-semibold">
-                {formatNumber(insights.recent_form.win_rate, "%")}
-              </p>
-              <p className="mt-1 text-xs text-stone-400">
-                {insights.recent_form.wins}W / {insights.recent_form.losses}L /{" "}
-                {insights.recent_form.draws}D
-              </p>
-            </div>
-            <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-              <p className="text-xs uppercase tracking-[0.15em] text-stone-400">Recent Avg ACS</p>
-              <p className="mt-2 text-2xl font-semibold">
-                {formatNumber(insights.recent_form.avg_acs)}
-              </p>
-              <p className="mt-1 text-xs text-stone-400">
-                Baseline: {formatNumber(insights.baseline_form.avg_acs)}
-              </p>
-            </div>
-            <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-              <p className="text-xs uppercase tracking-[0.15em] text-stone-400">Current Streak</p>
-              <p className="mt-2 text-2xl font-semibold">
-                {insights.streaks.current_streak_length} {insights.streaks.current_streak_type}
-              </p>
-              <p className="mt-1 text-xs text-stone-400">
-                Longest W/L: {insights.streaks.longest_win_streak} /{" "}
-                {insights.streaks.longest_loss_streak}
-              </p>
-            </div>
-            <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-              <p className="text-xs uppercase tracking-[0.15em] text-stone-400">Volatility</p>
-              <p className="mt-2 text-2xl font-semibold capitalize">{insights.volatility.level}</p>
-              <p className="mt-1 text-xs text-stone-400">
-                Result switch rate: {formatNumber(insights.volatility.result_switch_rate, "%")}
-              </p>
+          <div className="surface-strong panel-padding">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(320px,1.1fr)]">
+              <div>
+                <p className="eyebrow">Am I actually improving recently?</p>
+                <p className="metric-value metric-xl mt-5">{formatNumber(insights.recent_form.win_rate, "%")}</p>
+                <p className="section-copy">
+                  {insights.recent_form.wins} wins, {insights.recent_form.losses} losses, {insights.recent_form.draws} draws over the selected window.
+                </p>
+                {strongestTrend && (
+                  <p className="mt-5 text-lg leading-8 text-[var(--text-soft)]">
+                    Strongest signal: {metricLabels[strongestTrend.metric] ?? strongestTrend.metric} is {directionCopy(strongestTrend).toLowerCase()} against baseline.
+                  </p>
+                )}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <InsightMetric label="Recent ACS" value={formatCompact(insights.recent_form.avg_acs)} subtext={`Baseline ${formatCompact(insights.baseline_form.avg_acs)}`} />
+                <InsightMetric label="Recent ADR" value={formatCompact(insights.recent_form.avg_adr)} subtext={`Baseline ${formatCompact(insights.baseline_form.avg_adr)}`} />
+                <InsightMetric label="Current streak" value={`${insights.streaks.current_streak_length} ${insights.streaks.current_streak_type}`} subtext={`Longest W/L ${insights.streaks.longest_win_streak} / ${insights.streaks.longest_loss_streak}`} />
+                <InsightMetric label="Volatility" value={insights.volatility.level} subtext={`Switch rate ${formatNumber(insights.volatility.result_switch_rate, "%")}`} />
+              </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-stone-700/60 bg-stone-900/40 p-4">
-            <h3 className="text-lg font-medium">Trend Summary</h3>
-            <p className="mt-1 text-xs text-stone-400">
-              Recent window: {insights.trend_summary.recent_window} matches vs baseline:{" "}
-              {insights.trend_summary.baseline_window} matches
-            </p>
-            <div className="mt-4 grid gap-2 md:grid-cols-2">
+          <section className="surface panel-padding">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="eyebrow">What changed?</p>
+                <h2 className="section-title mt-2">
+                  Recent {insights.trend_summary.recent_window} vs baseline {insights.trend_summary.baseline_window}
+                </h2>
+              </div>
+              <span className="chip">Trend deltas</span>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {trendRows.map((row) => (
-                <div
-                  key={row.metric}
-                  className="rounded border border-stone-700/60 bg-stone-950/30 p-3"
-                >
-                  <p className="text-sm text-stone-300">{metricLabels[row.metric] ?? row.metric}</p>
-                  <p className={`mt-1 text-sm font-medium ${directionColor(row.direction)}`}>
-                    {directionPrefix(row.delta)}
-                    {formatNumber(row.delta)}
-                  </p>
-                  <p className="mt-1 text-xs text-stone-400">
-                    Recent {formatNumber(row.recent)} vs Baseline {formatNumber(row.baseline)}
-                  </p>
-                </div>
+                <TrendCard key={row.metric} row={row} />
               ))}
             </div>
-          </div>
+          </section>
 
-          <div className="grid gap-4">
-            <BreakdownTable title="Map Breakdown" rows={insights.map_breakdowns} />
-            <BreakdownTable title="Agent Breakdown" rows={insights.agent_breakdowns} />
-            <BreakdownTable title="Role Breakdown" rows={insights.role_breakdowns} />
-          </div>
+          <BreakdownSection title="Map cost" question="Which map is costing results?" rows={insights.map_breakdowns} />
+          <BreakdownSection title="Agent fit" question="Which agent profile is strongest?" rows={insights.agent_breakdowns} />
+          <BreakdownSection title="Role stability" question="Which role produces reliable impact?" rows={insights.role_breakdowns} />
         </>
       )}
     </section>

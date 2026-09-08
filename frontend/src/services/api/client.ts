@@ -38,7 +38,9 @@ export type RiotImportResult = {
   skipped_duplicates: number;
 };
 
-export const API_BASE_URL = "http://127.0.0.1:8000/api/v1";
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
+
+export const API_BASE_URL = configuredApiBaseUrl?.trim() || "http://127.0.0.1:8000/api/v1";
 
 function withQuery(path: string, filters: MatchFilters): string {
   const params = new URLSearchParams();
