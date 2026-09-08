@@ -868,10 +868,13 @@ button:disabled {
     box-shadow: var(--shadow-tight);
   }
 
-  .two-column,
   .three-column,
   .four-column {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .two-column {
+    grid-template-columns: 1fr;
   }
 
   .workflow-line {

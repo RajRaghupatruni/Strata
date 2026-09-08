@@ -71,7 +71,7 @@ function MatchCard({
       type="button"
       className={`data-row w-full p-4 text-left ${selected ? "data-row-selected" : ""}`}
       onClick={onSelect}
-      aria-pressed={selected}
+      aria-label={`Inspect match #${match.id}${selected ? ", currently selected" : ""}`}
     >
       <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
         <div>
