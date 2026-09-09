@@ -34,6 +34,70 @@ Default URLs:
 
 No `.env`, Riot key, or OpenAI key is required for the deterministic demo.
 
+## Docker Compose Startup (Windows)
+
+From the repository root in PowerShell, Docker Desktop runs the complete Linux-based
+local stack:
+
+```powershell
+docker compose up --build
+```
+
+The backend waits for the Postgres healthcheck, applies `alembic upgrade head`, and
+only then starts Uvicorn. The frontend is a production Vite build served by nginx.
+Use `http://localhost:5173` for the UI and `http://localhost:8000/health` for the API.
+
+Seed the Postgres-backed demo from a second PowerShell window:
+
+```powershell
+docker compose run --rm backend python -m app.seed_demo --allow-nonlocal
+```
+
+Validate the production schema and repeat-safe persistence:
+
+```powershell
+docker compose run --rm backend python scripts/smoke_test_postgres.py --repeat-seed
+```
+
+The direct equivalents of the small command surface are:
+
+```powershell
+.\scripts\strata.ps1 start
+.\scripts\strata.ps1 stop
+.\scripts\strata.ps1 seed
+.\scripts\strata.ps1 migrate
+.\scripts\strata.ps1 test-backend
+.\scripts\strata.ps1 logs
+.\scripts\strata.ps1 reset-demo-db
+```
+
+`reset-demo-db` runs `docker compose down -v` and removes the disposable named
+Postgres volume. Do not use it against shared data.
+
+### Clean-start verification sequence
+
+The complete disposable verification sequence is:
+
+```powershell
+docker compose down -v
+docker compose up --build -d
+docker compose run --rm backend python -m app.seed_demo --allow-nonlocal
+docker compose run --rm backend python scripts/smoke_test_postgres.py --repeat-seed
+Invoke-WebRequest http://localhost:5173 -UseBasicParsing
+Invoke-RestMethod http://localhost:8000/health
+Invoke-RestMethod http://localhost:8000/api/v1/home/summary
+Invoke-RestMethod http://localhost:8000/api/v1/coach/latest
+Invoke-RestMethod http://localhost:8000/api/v1/recommendations
+Invoke-RestMethod http://localhost:8000/api/v1/progress/latest
+docker compose down
+```
+
+The first command intentionally removes only this Compose project’s named volume.
+The seed output should report 40 inserted matches on a fresh database; the repeat
+seed in the validation command should report zero new matches and at least 40 skips.
+The endpoint responses provide host-level backend smoke coverage, while the frontend
+request confirms nginx serves the production bundle.
+
 ## Demo Data Reset and Seeding
 
 Seed from `backend`:
@@ -71,8 +135,8 @@ alembic upgrade head
 uvicorn app.main:app --port 8000
 ```
 
-The repository contains the migration configuration and initial schema revision. This
-runbook does not claim that a live PostgreSQL instance has been validated.
+The repository contains the migration configuration and initial schema revision. The
+containerized validation command above is the repeatable live PostgreSQL smoke path.
 
 Operational expectations for the merged migration path:
 

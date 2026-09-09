@@ -127,6 +127,42 @@ npm run dev
 Frontend default URL: `http://localhost:5173`  
 Backend health check: `http://127.0.0.1:8000/health`
 
+### Docker Compose stack
+
+Docker Desktop provides the recommended local stack on Windows. From the repository
+root in PowerShell:
+
+```powershell
+docker compose up --build
+```
+
+This starts PostgreSQL, runs `alembic upgrade head` in the backend before Uvicorn,
+and serves the Vite production build through nginx. Open `http://localhost:5173`;
+the API is available at `http://localhost:8000` and the database is persisted in the
+`strata-postgres-data` named volume. No Riot or OpenAI key is required.
+
+In a second PowerShell window, seed the containerized PostgreSQL database:
+
+```powershell
+docker compose run --rm backend python -m app.seed_demo --allow-nonlocal
+```
+
+Useful commands are `docker compose down`, `docker compose logs -f`,
+`docker compose run --rm backend alembic upgrade head`, and
+`docker compose down -v` for a disposable clean database reset. The explicit
+`--allow-nonlocal` is required because the seed guard protects non-file databases.
+The focused production-schema check, including a repeat seed, is:
+
+```powershell
+docker compose run --rm backend python scripts/smoke_test_postgres.py --repeat-seed
+```
+
+The same commands are available through `.\scripts\strata.ps1` (for example,
+`.\scripts\strata.ps1 validate-postgres`). Compose defaults map the frontend to
+port 5173, the API to 8000, and PostgreSQL to 5432; set `FRONTEND_PORT`,
+`BACKEND_PORT`, or `POSTGRES_PORT` in the PowerShell environment if a port is busy.
+If changing the frontend port, also configure that origin in the backend CORS policy.
+
 ### Demo data
 
 From `backend`, with dependencies installed:
