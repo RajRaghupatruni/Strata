@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models import IssueTag, Match, ProgressSnapshot, Recommendation
 from app.services.recommendations import evaluate_recommendation_effectiveness
+from app.core.observability import PROGRESS_EVALUATION_DURATION, timed
 
 
 def _match_sort_key(match: Match) -> tuple[int, int]:
@@ -185,6 +186,7 @@ def _summary_text(metric_changes: list[dict], issue_trends: list[dict], recommen
     )
 
 
+@timed(PROGRESS_EVALUATION_DURATION)
 def generate_progress_snapshot(
     db: Session,
     recent_window: int = 10,

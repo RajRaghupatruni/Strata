@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Match
+from app.core.observability import ANALYTICS_CALCULATION_DURATION, timed
 
 
 def _normalize_result(value: str | None) -> str:
@@ -248,6 +249,7 @@ def _volatility_summary(matches: list[Match]) -> dict:
     }
 
 
+@timed(ANALYTICS_CALCULATION_DURATION)
 def compute_insights(db: Session, recent_window: int = 10) -> dict:
     all_matches = db.scalars(select(Match)).all()
     all_matches.sort(key=_match_sort_key)
@@ -294,4 +296,3 @@ def compute_insights(db: Session, recent_window: int = 10) -> dict:
         "agent_breakdowns": _build_breakdowns(all_matches, "agent"),
         "role_breakdowns": _build_breakdowns(all_matches, "role"),
     }
-

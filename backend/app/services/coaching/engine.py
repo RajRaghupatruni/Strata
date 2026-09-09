@@ -14,6 +14,7 @@ from app.services.coaching.ai_refiner import (
     maybe_refine_coaching_report,
 )
 from app.services.coaching.assessment import build_performance_assessment
+from app.core.observability import COACHING_GENERATION_DURATION, timed
 
 ALLOWED_COACHING_MODES = {"deterministic", "hybrid", "ai_first"}
 
@@ -370,6 +371,7 @@ def _recommendation_candidates(
     ]
 
 
+@timed(COACHING_GENERATION_DURATION)
 def generate_coaching_report(
     db: Session, recent_window: int = 10, generated_at: datetime | None = None
 ) -> CoachingReport:
