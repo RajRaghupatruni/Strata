@@ -100,135 +100,114 @@ export function SettingsPage() {
   }
 
   return (
-    <section className="space-y-5">
+    <section className="page-stack">
       <PageHeader
-        eyebrow="Personal Context"
+        eyebrow="Player context"
         title="Settings"
-        description="Set your profile context so all recommendations stay aligned with your ranked goals."
+        description="Keep recommendations aligned with your rank goal, agent pool, role identity, and known improvement constraints."
       />
 
       {loading && (
         <StatePanel
           variant="loading"
-          title="Loading Profile"
-          description="Fetching your saved personal context and preferences."
+          title="Loading player context"
+          description="Fetching saved preferences and ranked goals."
         />
       )}
 
-      {error && <StatePanel variant="error" title="Settings Error" description={error} />}
-
-      {success && <StatePanel variant="success" title="Saved" description={success} />}
+      {error && <StatePanel variant="error" title="Settings need attention" description={error} />}
+      {success && <StatePanel variant="success" title="Settings saved" description={success} />}
 
       {!loading && (
-        <form
-          className="space-y-4 rounded-lg border border-stone-700/60 bg-stone-900/40 p-4"
-          onSubmit={onSubmit}
-        >
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1">
-              <label className="text-xs uppercase tracking-[0.15em] text-stone-400">
-                Display Name
-              </label>
-              <input
-                className="w-full rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-                value={form.displayName}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, displayName: event.target.value }))
-                }
-              />
+        <form className="surface panel-padding" onSubmit={onSubmit}>
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+            <div>
+              <p className="eyebrow">Identity</p>
+              <h2 className="section-title mt-3">The coaching lens</h2>
+              <p className="section-copy">
+                This context stays lightweight and player-owned. It shapes recommendations without replacing match evidence.
+              </p>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs uppercase tracking-[0.15em] text-stone-400">
-                Target Rank
+
+            <div className="grid gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="field-label">
+                  Display name
+                  <input
+                    className="field"
+                    value={form.displayName}
+                    onChange={(event) => setForm((prev) => ({ ...prev, displayName: event.target.value }))}
+                  />
+                </label>
+                <label className="field-label">
+                  Target rank
+                  <input
+                    className="field"
+                    placeholder="Ascendant 2"
+                    value={form.targetRank}
+                    onChange={(event) => setForm((prev) => ({ ...prev, targetRank: event.target.value }))}
+                  />
+                </label>
+              </div>
+
+              <label className="field-label">
+                Preferred agents
+                <input
+                  className="field"
+                  placeholder="Omen, Sova"
+                  value={form.preferredAgentsRaw}
+                  onChange={(event) => setForm((prev) => ({ ...prev, preferredAgentsRaw: event.target.value }))}
+                />
               </label>
-              <input
-                className="w-full rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-                placeholder="e.g. Ascendant 2"
-                value={form.targetRank}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, targetRank: event.target.value }))
-                }
-              />
+
+              <label className="field-label">
+                Preferred roles
+                <input
+                  className="field"
+                  placeholder="Controller, Initiator"
+                  value={form.preferredRolesRaw}
+                  onChange={(event) => setForm((prev) => ({ ...prev, preferredRolesRaw: event.target.value }))}
+                />
+              </label>
+
+              <label className="field-label">
+                Known weak areas
+                <input
+                  className="field"
+                  placeholder="first death control, utility timing"
+                  value={form.knownWeakAreasRaw}
+                  onChange={(event) => setForm((prev) => ({ ...prev, knownWeakAreasRaw: event.target.value }))}
+                />
+              </label>
+
+              <label className="field-label">
+                Improvement priorities
+                <input
+                  className="field"
+                  placeholder="late round discipline, retake spacing"
+                  value={form.improvementPrioritiesRaw}
+                  onChange={(event) => setForm((prev) => ({ ...prev, improvementPrioritiesRaw: event.target.value }))}
+                />
+              </label>
+
+              <label className="field-label">
+                Personal notes
+                <textarea
+                  className="textarea"
+                  placeholder="Add context about habits, goals, constraints, or current training focus."
+                  value={form.personalNotes}
+                  onChange={(event) => setForm((prev) => ({ ...prev, personalNotes: event.target.value }))}
+                />
+              </label>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs uppercase tracking-[0.15em] text-stone-400">
-              Preferred Agents (comma-separated)
-            </label>
-            <input
-              className="w-full rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-              placeholder="Omen, Sova"
-              value={form.preferredAgentsRaw}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, preferredAgentsRaw: event.target.value }))
-              }
-            />
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <button className="button button-primary" disabled={saving} type="submit">
+              {saving ? "Saving settings" : "Save settings"}
+            </button>
+            <p className="microcopy">Comma-separated values are converted into structured profile lists.</p>
           </div>
-
-          <div className="space-y-1">
-            <label className="text-xs uppercase tracking-[0.15em] text-stone-400">
-              Preferred Roles (comma-separated)
-            </label>
-            <input
-              className="w-full rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-              placeholder="Controller, Initiator"
-              value={form.preferredRolesRaw}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, preferredRolesRaw: event.target.value }))
-              }
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs uppercase tracking-[0.15em] text-stone-400">
-              Known Weak Areas (comma-separated)
-            </label>
-            <input
-              className="w-full rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-              placeholder="early_death, utility_timing"
-              value={form.knownWeakAreasRaw}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, knownWeakAreasRaw: event.target.value }))
-              }
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs uppercase tracking-[0.15em] text-stone-400">
-              Improvement Priorities (comma-separated)
-            </label>
-            <input
-              className="w-full rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-              placeholder="first_death_control, late_round_comms"
-              value={form.improvementPrioritiesRaw}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, improvementPrioritiesRaw: event.target.value }))
-              }
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs uppercase tracking-[0.15em] text-stone-400">
-              Personal Notes
-            </label>
-            <textarea
-              className="min-h-[120px] w-full rounded border border-stone-700 bg-stone-800/70 px-3 py-2 text-sm"
-              placeholder="Add context about habits, goals, or constraints."
-              value={form.personalNotes}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, personalNotes: event.target.value }))
-              }
-            />
-          </div>
-
-          <button
-            className="rounded bg-amber-200/20 px-4 py-2 text-sm text-amber-100 transition hover:bg-amber-200/30 disabled:opacity-50"
-            disabled={saving}
-            type="submit"
-          >
-            {saving ? "Saving..." : "Save Settings"}
-          </button>
         </form>
       )}
     </section>

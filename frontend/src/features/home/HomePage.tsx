@@ -1,43 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { StatePanel } from "../../components/StatePanel";
-import { fetchHomeSummary } from "../../services/api/client";
+import { fetchHomeSummary, fetchMatches } from "../../services/api/client";
 import type { HomeSummary, PatternHighlight } from "../../types/home";
-
-const productPillars = [
-  {
-    title: "Data Integrity",
-    description: "Official Riot match ingestion with deterministic mapping for repeatable analysis."
-  },
-  {
-    title: "Coaching Brain",
-    description: "Weighted local algorithm scores consistency, mechanics, discipline, and impact."
-  },
-  {
-    title: "Privacy by Default",
-    description: "Runs local-first. Optional AI layer is off until you explicitly enable it."
-  }
-];
-
-const roadmapNow = [
-  "Live Riot import by player Riot ID",
-  "Smart assessment vector and recurring issue scoring",
-  "Progress snapshots and recommendation tracking",
-  "Modern app shell with responsive product navigation"
-];
-
-const roadmapNext = [
-  "Matchup-specific drill recommendations per map + role",
-  "Session templates with auto-generated warmup plans",
-  "Trend overlays and richer interactive charts"
-];
+import type { Match } from "../../types/match";
 
 function formatDate(value?: string | null): string {
   if (!value) return "N/A";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString();
+  return parsed.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
 }
 
 function formatWinRate(value: number | null | undefined): string {
@@ -45,46 +23,79 @@ function formatWinRate(value: number | null | undefined): string {
   return `${value.toFixed(1)}%`;
 }
 
-function PatternCard({
-  title,
-  pattern
+function formatResult(result?: string | null): string {
+  if (!result) return "Unscored";
+  return result.charAt(0).toUpperCase() + result.slice(1);
+}
+
+function resultTone(result?: string | null): string {
+  if (result === "win") return "chip-positive";
+  if (result === "loss") return "chip-negative";
+  return "";
+}
+
+function PatternReadout({
+  label,
+  pattern,
+  tone = "neutral"
 }: {
-  title: string;
+  label: string;
   pattern?: PatternHighlight | null;
+  tone?: "positive" | "negative" | "neutral";
 }) {
+  const toneClass = tone === "positive" ? "tone-positive" : tone === "negative" ? "tone-negative" : "";
+
   return (
-    <div className="strata-glass p-4">
-      <p className="text-[0.65rem] uppercase tracking-[0.19em] text-stone-400">{title}</p>
-      <p className="mt-2 text-lg font-semibold text-stone-100">{pattern?.label ?? "N/A"}</p>
-      <p className="mt-1 text-xs text-stone-400">
-        {pattern?.matches ?? 0} matches | {formatWinRate(pattern?.win_rate)} win rate
+    <div className="surface-subtle p-4">
+      <p className="label">{label}</p>
+      <p className={`mt-3 text-2xl font-semibold ${toneClass}`}>{pattern?.label ?? "Insufficient data"}</p>
+      <p className="section-copy">
+        {pattern?.matches ?? 0} matches, {formatWinRate(pattern?.win_rate)} win rate
       </p>
     </div>
   );
 }
 
-function CounterTile({ label, value }: { label: string; value: number }) {
+function MatchRow({ match }: { match: Match }) {
   return (
-    <div className="strata-stat-tile">
-      <p className="text-[0.66rem] uppercase tracking-[0.16em] text-stone-400">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-stone-100">{value}</p>
-    </div>
+    <article className="data-row p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="chip-row">
+            <span className={`chip ${resultTone(match.result)}`}>{formatResult(match.result)}</span>
+            <span className="chip">{match.map_name ?? "Unknown map"}</span>
+            <span className="chip">{match.agent ?? "Unknown agent"}</span>
+          </div>
+          <p className="mt-3 text-sm text-[var(--text-muted)]">{formatDate(match.played_at)}</p>
+        </div>
+        <div className="flex items-end gap-5 text-right">
+          <div>
+            <p className="label">KDA</p>
+            <p className="metric-value text-lg">
+              {match.kills ?? "-"} / {match.deaths ?? "-"} / {match.assists ?? "-"}
+            </p>
+          </div>
+          <div>
+            <p className="label">ACS</p>
+            <p className="metric-value text-lg">{match.acs ?? "N/A"}</p>
+          </div>
+        </div>
+      </div>
+    </article>
   );
 }
 
-function QuickLink({ to, label }: { to: string; label: string }) {
+function QuickLink({ to, children, primary = false }: { to: string; children: string; primary?: boolean }) {
   return (
-    <Link
-      to={to}
-      className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-stone-200 transition hover:-translate-y-[1px] hover:border-amber-300/30 hover:bg-amber-300/10"
-    >
-      {label}
+    <Link to={to} className={`button ${primary ? "button-primary" : "button-secondary"}`}>
+      {children}
     </Link>
   );
 }
 
 export function HomePage() {
   const [data, setData] = useState<HomeSummary | null>(null);
+  const [recentMatches, setRecentMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,8 +104,12 @@ export function HomePage() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetchHomeSummary(10);
-        setData(response);
+        const [summary, matchResponse] = await Promise.all([
+          fetchHomeSummary(10),
+          fetchMatches({ limit: 5, offset: 0 })
+        ]);
+        setData(summary);
+        setRecentMatches(matchResponse.matches);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load home summary");
       } finally {
@@ -104,153 +119,153 @@ export function HomePage() {
     void load();
   }, []);
 
-  const counters = data?.counters;
+  const reviewBacklog = useMemo(
+    () => recentMatches.filter((match) => !match.review_note_count || match.review_note_count <= 0),
+    [recentMatches]
+  );
 
-  return (
-    <section className="space-y-5">
-      {loading && (
+  if (loading) {
+    return (
+      <section className="page-stack">
         <StatePanel
           variant="loading"
-          title="Loading Command Center"
-          description="Collecting your latest match, coaching, and progress signals."
+          title="Assembling your command center"
+          description="Pulling recent form, coaching focus, match history, and progress evidence into one view."
         />
-      )}
+      </section>
+    );
+  }
 
-      {error && <StatePanel variant="error" title="Home Data Error" description={error} />}
+  if (error) {
+    return (
+      <section className="page-stack">
+        <StatePanel variant="error" title="Home data is unavailable" description={error} />
+      </section>
+    );
+  }
 
-      {!loading && data && (
-        <>
-          <div className="strata-glass strata-hero p-5 md:p-6">
-            <div className="relative z-[1] grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-              <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-stone-400">Session Context</p>
-                <p className="mt-2 text-lg font-medium text-stone-100">{data.current_rank_context}</p>
-                <p className="mt-2 text-sm leading-relaxed text-stone-300">{data.recent_trend}</p>
-                <p className="mt-3 text-xs text-stone-400">Updated: {formatDate(data.generated_at)}</p>
-                <div className="strata-chip-row mt-4">
-                  <span className="strata-chip">Focus: {data.current_focus_area ?? "N/A"}</span>
-                  <span className="strata-chip">
-                    Next Review: {data.next_review_suggestion ?? "Generate review signals"}
-                  </span>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <QuickLink to="/matches" label="Import & Explore Matches" />
-                  <QuickLink to="/coach" label="Generate Coaching" />
-                  <QuickLink to="/progress" label="Track Improvement" />
-                </div>
-              </div>
+  if (!data) {
+    return (
+      <section className="page-stack">
+        <StatePanel
+          variant="empty"
+          title="No home signal yet"
+          description="Import matches or seed the local demo data to unlock the Strata command center."
+        />
+      </section>
+    );
+  }
 
-              <div className="grid grid-cols-2 gap-3">
-                <CounterTile label="Matches" value={counters?.total_matches ?? 0} />
-                <CounterTile label="Review Notes" value={counters?.total_review_notes ?? 0} />
-                <CounterTile
-                  label="Coaching Reports"
-                  value={counters?.total_coaching_reports ?? 0}
-                />
-                <CounterTile
-                  label="Progress Snapshots"
-                  value={counters?.total_progress_snapshots ?? 0}
-                />
-              </div>
+  const currentPriority = data.coaching_summary?.priority_issue || data.current_focus_area || "Build the next evidence loop";
+  const nextAction = data.coaching_summary?.next_action || data.next_review_suggestion || "Review the most recent match and tag one repeated issue.";
+  const progressStatus = data.progress_highlight?.effectiveness_status || "Awaiting snapshot";
+
+  return (
+    <section className="page-stack">
+      <div className="surface-strong panel-padding">
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+          <div>
+            <p className="eyebrow">Current priority</p>
+            <h1 className="mt-4 max-w-4xl text-[clamp(2.8rem,7vw,6.8rem)] font-[720] leading-[0.9] tracking-[0] text-[var(--text)]">
+              {currentPriority}
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--text-soft)]">
+              {nextAction}
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <QuickLink to="/review" primary>
+                Start review
+              </QuickLink>
+              <QuickLink to="/coach">Open coaching plan</QuickLink>
+              <QuickLink to="/matches">Browse matches</QuickLink>
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <PatternCard title="Strongest Map" pattern={data.strongest_map} />
-            <PatternCard title="Weakest Map" pattern={data.weakest_map} />
-            <PatternCard title="Strongest Agent" pattern={data.strongest_agent} />
-            <PatternCard title="Weakest Agent" pattern={data.weakest_agent} />
+          <div className="grid content-end gap-3">
+            <div className="surface-subtle p-4">
+              <p className="label">Recent form</p>
+              <p className="mt-3 text-xl leading-8 text-[var(--text-soft)]">{data.recent_trend}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="surface-subtle p-4">
+                <p className="label">Matches</p>
+                <p className="metric-value metric-md mt-2">{data.counters.total_matches}</p>
+              </div>
+              <div className="surface-subtle p-4">
+                <p className="label">Reviews</p>
+                <p className="metric-value metric-md mt-2">{data.counters.total_review_notes}</p>
+              </div>
+            </div>
+            <p className="microcopy">Updated {formatDate(data.generated_at)}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="two-column">
+        <div className="surface panel-padding">
+          <p className="eyebrow">Strongest positive trend</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <PatternReadout label="Map edge" pattern={data.strongest_map} tone="positive" />
+            <PatternReadout label="Agent edge" pattern={data.strongest_agent} tone="positive" />
+          </div>
+        </div>
+
+        <div className="surface panel-padding">
+          <p className="eyebrow">Biggest concern</p>
+          <div className="mt-4 grid gap-3">
+            <PatternReadout label="Map risk" pattern={data.weakest_map} tone="negative" />
+            <PatternReadout label="Agent risk" pattern={data.weakest_agent} tone="negative" />
+          </div>
+        </div>
+      </div>
+
+      <div className="two-column">
+        <div className="surface panel-padding">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="eyebrow">Recent matches</p>
+              <h2 className="section-title mt-2">Latest evidence entering the loop</h2>
+            </div>
+            <QuickLink to="/matches">View all</QuickLink>
+          </div>
+          <div className="data-list mt-5">
+            {recentMatches.length === 0 && (
+              <StatePanel
+                variant="empty"
+                title="No matches imported"
+                description="Use the match import workflow to begin building deterministic performance history."
+              />
+            )}
+            {recentMatches.map((match) => (
+              <MatchRow key={match.id} match={match} />
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-5">
+          <div className="surface panel-padding">
+            <p className="eyebrow">Review backlog</p>
+            <p className="metric-value metric-lg mt-4">{reviewBacklog.length}</p>
+            <p className="section-copy">
+              Recent matches without notes. Strata gets sharper when each session leaves a trail of tagged decisions.
+            </p>
+            <div className="mt-5">
+              <QuickLink to="/review">Tag issues</QuickLink>
+            </div>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-            <div className="space-y-4">
-              <div className="strata-glass p-4">
-                <p className="text-[0.65rem] uppercase tracking-[0.18em] text-stone-400">Coaching Summary</p>
-                <p className="mt-2 text-sm text-stone-200">
-                  Priority: {data.coaching_summary?.priority_issue ?? "No report yet."}
-                </p>
-                <p className="mt-2 text-sm text-stone-300">
-                  Next action: {data.coaching_summary?.next_action ?? "Generate a coaching report."}
-                </p>
-                <p className="mt-2 text-xs text-stone-400">
-                  Generated: {formatDate(data.coaching_summary?.generated_at)}
-                </p>
-              </div>
-
-              <div className="strata-glass p-4">
-                <p className="text-[0.65rem] uppercase tracking-[0.18em] text-stone-400">Progress Highlight</p>
-                <p className="mt-2 text-sm text-stone-200">
-                  {data.progress_highlight?.summary ?? "No progress snapshot yet."}
-                </p>
-                <p className="mt-2 text-xs text-stone-400">
-                  Status: {data.progress_highlight?.effectiveness_status ?? "N/A"} | Snapshot: #
-                  {data.progress_highlight?.snapshot_id ?? "N/A"} | Date:{" "}
-                  {formatDate(data.progress_highlight?.snapshot_date)}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="strata-glass p-4">
-                <p className="text-[0.65rem] uppercase tracking-[0.18em] text-stone-400">
-                  Product Pillars
-                </p>
-                <div className="mt-3 space-y-3">
-                  {productPillars.map((pillar) => (
-                    <div key={pillar.title} className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                      <p className="text-sm font-semibold text-stone-100">{pillar.title}</p>
-                      <p className="mt-1 text-xs text-stone-300">{pillar.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="strata-glass p-4">
-                <p className="text-[0.65rem] uppercase tracking-[0.18em] text-stone-400">Quick Links</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {data.quick_links.map((link) => (
-                    <QuickLink
-                      key={link}
-                      to={link}
-                      label={link.replace("/", "").replace(/^./, (char) => char.toUpperCase())}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
+          <div className="surface panel-padding">
+            <p className="eyebrow">Progress status</p>
+            <h2 className="section-title mt-3">{progressStatus}</h2>
+            <p className="section-copy">
+              {data.progress_highlight?.summary || "Generate a progress snapshot once you have before and after evidence."}
+            </p>
+            <p className="microcopy mt-4">
+              Snapshot {data.progress_highlight?.snapshot_id ?? "N/A"} | {formatDate(data.progress_highlight?.snapshot_date)}
+            </p>
           </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="strata-glass p-4">
-              <p className="text-[0.65rem] uppercase tracking-[0.18em] text-stone-400">Live Now</p>
-              <div className="mt-3 space-y-2">
-                {roadmapNow.map((item) => (
-                  <p
-                    key={item}
-                    className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-stone-200"
-                  >
-                    {item}
-                  </p>
-                ))}
-              </div>
-            </div>
-
-            <div className="strata-glass p-4">
-              <p className="text-[0.65rem] uppercase tracking-[0.18em] text-stone-400">Planned Upgrades</p>
-              <div className="mt-3 space-y-2">
-                {roadmapNext.map((item) => (
-                  <p
-                    key={item}
-                    className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-stone-200"
-                  >
-                    {item}
-                  </p>
-                ))}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+        </div>
+      </div>
     </section>
   );
 }

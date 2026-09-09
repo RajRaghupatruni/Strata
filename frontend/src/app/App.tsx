@@ -17,14 +17,51 @@ import { ReviewPage } from "../features/review/ReviewPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 
 const links = [
-  { to: "/", label: "Home", hotkey: "1", summary: "Command Center" },
-  { to: "/matches", label: "Matches", hotkey: "2", summary: "Live Match Vault" },
-  { to: "/insights", label: "Insights", hotkey: "3", summary: "Trend Intelligence" },
-  { to: "/review", label: "Review", hotkey: "4", summary: "Round Breakdown" },
-  { to: "/coach", label: "Coach", hotkey: "5", summary: "Action Plan Engine" },
-  { to: "/progress", label: "Progress", hotkey: "6", summary: "Improvement Delta" },
-  { to: "/settings", label: "Settings", hotkey: "7", summary: "Profile + Context" }
+  { to: "/", label: "Home", hotkey: "1", summary: "What matters now" },
+  { to: "/matches", label: "Matches", hotkey: "2", summary: "Browse history" },
+  { to: "/insights", label: "Insights", hotkey: "3", summary: "Read the trend" },
+  { to: "/review", label: "Review", hotkey: "4", summary: "Tag the cause" },
+  { to: "/coach", label: "Coach", hotkey: "5", summary: "Plan the session" },
+  { to: "/progress", label: "Progress", hotkey: "6", summary: "Close the loop" },
+  { to: "/settings", label: "Settings", hotkey: "7", summary: "Player context" }
 ];
+
+function Brand() {
+  return (
+    <div className="brand-mark">
+      <div className="brand-glyph" aria-hidden="true">
+        S
+      </div>
+      <div>
+        <p className="brand-title">Strata</p>
+        <p className="brand-subtitle">Performance intelligence</p>
+      </div>
+    </div>
+  );
+}
+
+function Navigation() {
+  return (
+    <nav className="nav-list" aria-label="Primary navigation">
+      {links.map((link) => (
+        <NavLink
+          key={link.to}
+          to={link.to}
+          end={link.to === "/"}
+          className={({ isActive }) => `nav-link ${isActive ? "nav-link-active" : ""}`}
+        >
+          <span>
+            <span className="nav-label">{link.label}</span>
+            <span className="nav-summary">{link.summary}</span>
+          </span>
+          <span className="kbd" aria-label={`Alt ${link.hotkey}`}>
+            {link.hotkey}
+          </span>
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
 
 function AppShell() {
   const navigate = useNavigate();
@@ -39,7 +76,9 @@ function AppShell() {
     function onKeyDown(event: KeyboardEvent) {
       if (!event.altKey) return;
       const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT")) {
+        return;
+      }
       const link = links.find((item) => item.hotkey === event.key);
       if (!link) return;
       event.preventDefault();
@@ -51,99 +90,60 @@ function AppShell() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen strata-background text-stone-100">
-      <div className="strata-atmo" aria-hidden="true" />
-      <div className="strata-grid-overlay" aria-hidden="true" />
-      <div className="mx-auto flex min-h-screen w-full max-w-[1420px] flex-col px-4 pb-6 pt-4 md:px-6">
-        <header className="strata-topbar strata-fade-in">
-          <button
-            className="strata-burger strata-burger-float md:hidden"
-            type="button"
-            onClick={() => setIsMenuOpen((prev) => !prev)}
-            aria-label="Toggle navigation"
-            aria-expanded={isMenuOpen}
-          >
-            <span />
-            <span />
-            <span />
-          </button>
-          <div className="strata-brand-block strata-brand-centered">
-            <p className="strata-brand-kicker">Strata</p>
-            <div className="strata-title-divider" aria-hidden="true" />
-            <p className="strata-brand-subline">Rank Up, Smarter.</p>
+    <div className="app-canvas">
+      <div className="app-layout">
+        <aside className="app-sidebar">
+          <div>
+            <Brand />
+            <Navigation />
           </div>
-        </header>
+          <div className="sidebar-note">
+            <p className="label">Local first</p>
+            <p className="microcopy mt-2">
+              Deterministic analytics form the evidence. Coaching explains what to do with it.
+            </p>
+          </div>
+        </aside>
 
-        <div className="mt-4 grid flex-1 gap-4 md:grid-cols-[250px_minmax(0,1fr)]">
-          <aside className="strata-sidebar hidden md:flex">
-            <div className="space-y-1">
-              <p className="px-2 text-[0.63rem] uppercase tracking-[0.22em] text-stone-500">
-                Navigation
-              </p>
-              <nav className="space-y-1">
-                {links.map((link) => (
-                  <NavLink
-                    key={link.to}
-                    to={link.to}
-                    end={link.to === "/"}
-                    className={({ isActive }) =>
-                      `strata-side-link ${isActive ? "strata-side-link-active" : "strata-side-link-idle"}`
-                    }
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{link.label}</p>
-                      <p className="text-[0.67rem] text-stone-400">{link.summary}</p>
-                    </div>
-                    <span className="strata-kbd">{link.hotkey}</span>
-                  </NavLink>
-                ))}
-              </nav>
-            </div>
-            <div className="strata-sidebar-note">
-              <p className="text-[0.62rem] uppercase tracking-[0.2em] text-stone-500">
-                Live Workflow
-              </p>
-              <p className="mt-2 text-xs text-stone-300">
-                Import Riot matches, review patterns, generate coaching, track progress.
-              </p>
-            </div>
-          </aside>
+        <div className="app-main">
+          <header className="mobile-topbar">
+            <Brand />
+            <button
+              className="button button-secondary"
+              type="button"
+              onClick={() => setIsMenuOpen(true)}
+              aria-label="Open navigation"
+              aria-expanded={isMenuOpen}
+            >
+              Menu
+            </button>
+          </header>
 
           {isMenuOpen && (
-            <div className="md:hidden">
+            <div className="mobile-menu">
+              <aside className="mobile-menu-panel">
+                <div className="flex items-center justify-between gap-3">
+                  <Brand />
+                  <button
+                    className="button button-secondary"
+                    type="button"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+                <Navigation />
+              </aside>
               <button
                 type="button"
-                className="strata-mobile-backdrop"
+                className="mobile-menu-backdrop"
                 onClick={() => setIsMenuOpen(false)}
                 aria-label="Close navigation"
               />
-              <aside className="strata-mobile-drawer">
-                <p className="px-2 text-[0.63rem] uppercase tracking-[0.22em] text-stone-500">
-                  Navigate
-                </p>
-                <nav className="mt-2 space-y-1">
-                  {links.map((link) => (
-                    <NavLink
-                      key={link.to}
-                      to={link.to}
-                      end={link.to === "/"}
-                      className={({ isActive }) =>
-                        `strata-side-link ${isActive ? "strata-side-link-active" : "strata-side-link-idle"}`
-                      }
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{link.label}</p>
-                        <p className="text-[0.67rem] text-stone-400">{link.summary}</p>
-                      </div>
-                      <span className="strata-kbd">{link.hotkey}</span>
-                    </NavLink>
-                  ))}
-                </nav>
-              </aside>
             </div>
           )}
 
-          <main className="strata-main-frame strata-fade-in">
+          <main className="page">
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/matches" element={<MatchesPage />} />
