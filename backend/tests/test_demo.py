@@ -84,6 +84,20 @@ def asgi_request(app, method: str, path: str, payload: dict | None = None):
         return asyncio.run(_asgi_request(app, method, path, payload))
 
 
+def iter_api_routes(routes, prefix: str = ""):
+    """Walk direct and nested FastAPI routes across supported router layouts."""
+    for route in routes:
+        if isinstance(route, APIRoute):
+            yield route, f"{prefix}{route.path}"
+            continue
+        original_router = getattr(route, "original_router", None)
+        if original_router is None:
+            continue
+        include_context = getattr(route, "include_context", None)
+        nested_prefix = getattr(include_context, "prefix", "")
+        yield from iter_api_routes(original_router.routes, f"{prefix}{nested_prefix}")
+
+
 class DemoTests(unittest.TestCase):
     def setUp(self):
         self.network = self.enterContext(patch("urllib.request.urlopen", side_effect=AssertionError("Unexpected HTTP call")))
@@ -464,12 +478,10 @@ class DemoTests(unittest.TestCase):
             ("PUT", "/api/v1/settings/profile"),
         }
         guarded = set()
-        for route in app.routes:
-            if not isinstance(route, APIRoute):
-                continue
+        for route, path in iter_api_routes(app.routes):
             if any(dep.call is require_writable_demo for dep in route.dependant.dependencies):
                 for method in route.methods or set():
-                    guarded.add((method, route.path))
+                    guarded.add((method, path))
         self.assertTrue(expected.issubset(guarded))
 
     def test_existing_review_and_home_workflows(self):
