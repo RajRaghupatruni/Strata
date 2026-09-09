@@ -1,8 +1,8 @@
 # README Release Plan
 
-Do not perform the final README rewrite until the backend persistence branch and public
-hosting contracts are merged. This file defines the target README structure and the
-claims that need cleanup before release.
+Do not perform the final README rewrite until public hosting contracts and final release
+evidence are ready. Backend persistence and recommendation contracts are merged; this
+file defines the remaining target README structure and claims that need cleanup.
 
 ## Target README Structure
 
@@ -37,7 +37,8 @@ claims that need cleanup before release.
 
 7. Architecture diagram
    - Reuse or condense the Mermaid diagram from `ARCHITECTURE.md`.
-   - Keep PostgreSQL/Alembic wording aligned with the backend merge state.
+   - State that PostgreSQL is the hosted/production target and Alembic owns migrations;
+     do not imply that a live PostgreSQL environment has already been validated.
 
 8. One-command local setup
    - Finalize after package/install expectations settle.
@@ -56,7 +57,8 @@ claims that need cleanup before release.
     - Do not include benchmark numbers or coverage claims unless measured.
 
 11. Observability
-    - Pending until request IDs/logging/deployment logs are merged.
+    - Pending P1: OpenTelemetry, Grafana, request IDs, structured logs, and deployment
+      log operations.
     - Document local troubleshooting now; production observability after hosting lands.
 
 12. Deployment
@@ -75,7 +77,8 @@ claims that need cleanup before release.
     - Background SyncJob workflow.
     - Authentication/session isolation.
     - Hosted observability.
-    - Recommendation/effectiveness refinement after backend workstream lands.
+    - Recommendation/effectiveness refinement beyond the merged persisted, sample-aware
+      evidence contract.
 
 ## Existing README Claims To Remove Or Update
 
@@ -86,7 +89,7 @@ claims that need cleanup before release.
 | Long phase-by-phase implementation history | Condense into current product capabilities and evidence. Senior reviewers need what exists now, not every phase label. |
 | Riot import endpoint details | Keep only with clear caveat: requires approved Riot access and credentials, not available in the initial public demo. |
 | Progress/recommendation effectiveness | Explain that effectiveness requires future evidence after recommendations. Do not imply seeded proof of coaching success. |
-| PostgreSQL/Alembic | Add only after backend branch merges; until then describe as intended/active workstream. |
+| PostgreSQL/Alembic | Describe as implemented hosted/production persistence and migration support. Do not claim live PostgreSQL validation or final deployment readiness. |
 | Deployment | Add only after public hosting exists. Do not invent URLs, scaling behavior, or rollback commands. |
 | Observability | Add exact request ID/logging behavior only after merged. |
 | Test evidence | Refresh with actual commands and results from the release candidate. Do not invent coverage or performance numbers. |
@@ -104,8 +107,7 @@ claims that need cleanup before release.
 
 Wait for:
 
-- PostgreSQL/Alembic merge and exact migration commands.
-- Recommendation persistence/effectiveness contract stabilization.
-- Public hosting choice and deployment/rollback details.
+- Final public hosting choice and exact deployment/rollback details.
 - Final frontend screenshot or demo capture.
-- Final validation pass with backend tests and frontend build.
+- Final release validation, including hosted-configuration checks and the backend/frontend
+  test and build results.

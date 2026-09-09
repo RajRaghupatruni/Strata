@@ -19,7 +19,7 @@ flowchart LR
     Browser --> Frontend[React + TypeScript frontend]
     Frontend --> API[FastAPI backend]
     API --> Services[Application and domain services]
-    Services --> DB[(PostgreSQL planned for hosted persistence / SQLite for current local and test use)]
+    Services --> DB[(PostgreSQL for hosted/production persistence / SQLite for local and test use)]
 
     subgraph Providers[Provider boundary]
         Synthetic[SyntheticMatchProvider]
@@ -53,25 +53,28 @@ or phrase guidance when configured, but it does not own statistical facts.
 | --- | --- |
 | Frontend | React + TypeScript application with Home, Matches, Insights, Review, Coach, Progress, and Settings surfaces. |
 | Backend | FastAPI routes organized by feature area, backed by SQLAlchemy models and services. |
-| Local persistence | SQLAlchemy persistence currently works with SQLite in this checkout. A parallel backend branch is adding PostgreSQL and Alembic. |
+| Persistence | SQLAlchemy supports SQLite for local/test workflows and PostgreSQL for hosted/production deployments. Alembic owns schema evolution. Live PostgreSQL validation is not claimed here. |
+| Database integrity | External match IDs are enforced unique at the database layer, with application-level duplicate handling retained for clear import behavior. |
 | Ingestion | Synthetic provider and retained Riot adapter feed shared payload validation, normalization, and match persistence. |
 | Demo data | `python -m app.seed_demo` imports 40 deterministic fictional matches. Repeat runs skip existing demo match IDs. |
 | Offline operation | Core demo startup, analytics, review, coaching, and progress operate without Riot or OpenAI credentials. |
 | Analytics | Backend services compute deterministic recent/baseline form, map/agent/role breakdowns, streaks, trends, volatility, and progress comparisons. |
 | Review | Users can add/edit/delete review notes and issue tags, then view recurring issue groups. |
 | Coaching | Deterministic coaching is the default. Optional AI refinement exists behind explicit configuration. |
-| Progress | Progress snapshots compare match windows and available recommendation evidence. New recommendations should show insufficient future evidence until later matches exist. |
+| Recommendations and progress | Recommendations persist independently of reports. Progress evaluates a selected recommendation with deterministic before/after evidence and exposes `insufficient_data`, `directional`, and `supported` sample-aware states. The client cannot fabricate effectiveness outcomes. |
+| Public demo protection | `PUBLIC_DEMO_MODE` keeps hosted demo reads available while rejecting protected mutations with a read-only response. |
+| Startup | FastAPI lifespan startup initializes the application lifecycle and database setup used by the local/demo path. |
 
 ## P1 / Planned
 
 | Area | Planned direction |
 | --- | --- |
-| PostgreSQL and Alembic | Intended hosted/production persistence decision. The active backend workstream is implementing it; this document should be revisited after merge. |
 | Authentication and session isolation | Required before public shared write access is enabled. Current demo assumptions must not be treated as multi-user isolation. |
-| Hosted deployment | Public hosting is planned before release. Deployment topology, rollback commands, and operational ownership are pending. |
-| Riot production access | Requires Riot approval of the finished application. The adapter is retained, but initial public demo credentials are absent. |
-| Background Riot sync | Deferred from the first release. A future SyncJob workflow should handle retries, 429s, stale jobs, idempotency, and duplicate requests. |
-| Observability | Request IDs, structured logs, deployment logs, and production dashboards are pending integration. |
+| Hosted deployment | Final public deployment, topology, rollback commands, and operational ownership remain pending. |
+| Riot production access | Requires Riot approval of the finished application. The adapter is retained, but live production access is not available to the demo. |
+| Background Riot sync | Redis, Celery, and an asynchronous SyncJob workflow remain deferred. A future workflow should handle retries, 429s, stale jobs, idempotency, and duplicate requests. |
+| Observability | OpenTelemetry instrumentation and Grafana dashboards remain pending, along with hosted request/log operations. |
+| Packaging and delivery | Docker/Compose and CI are not present in this repository and remain pending P1 work. |
 
 Redis, Celery, or equivalent distributed job infrastructure is not implemented in the
 current release baseline and should not be depicted as live infrastructure.
@@ -122,9 +125,10 @@ consume.
 ### Persistence
 
 SQLAlchemy stores normalized matches, review notes, issue tags, coaching reports,
-progress snapshots, and profile context. PostgreSQL is the intended hosted/production
-database once the active backend workstream lands. SQLite may remain useful for
-lightweight local and test workflows.
+persisted recommendations, progress snapshots, and profile context. PostgreSQL is the
+supported hosted/production database and Alembic provides explicit schema migrations.
+SQLite remains useful for lightweight local and test workflows. This document does not
+claim that a live PostgreSQL environment has been exercised.
 
 ## Deterministic Analytics and AI
 
@@ -173,8 +177,8 @@ frontend/
   coaching path intended for real data.
 - Deterministic analytics before AI keeps numbers auditable and lets the app work
   without external model credentials.
-- PostgreSQL and Alembic are appropriate for hosted persistence, but the documentation
-  should not claim that work is merged until the backend branch lands.
+- PostgreSQL and Alembic provide the production persistence path; deployment still
+  requires environment-specific migration and rollback validation.
 - Background synchronization is intentionally deferred. First release behavior should be
   synchronous/provider-driven rather than pretending distributed execution already
   exists.

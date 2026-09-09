@@ -1,7 +1,7 @@
 # Strata Operational Runbook
 
 This runbook covers the first public-release baseline and marks pending infrastructure
-explicitly. Commands assume Windows PowerShell from `C:\Raj\Code\Strata-docs`.
+explicitly. Commands assume Windows PowerShell from `C:\Raj\Code\Strata`.
 
 ## Local Startup
 
@@ -58,12 +58,21 @@ targets and can affect shared state.
 
 ## Database Migration
 
-Pending active backend merge.
+Alembic is the schema migration path for PostgreSQL and other deployed database
+environments. Local SQLite startup still creates its schema automatically for the
+`local`, `development`, and `test` environments.
 
-This checkout currently creates tables at startup for the local baseline. A parallel
-backend workstream is adding PostgreSQL and Alembic. After that lands, this section
-should be replaced with the exact migration commands, environment variables, and
-rollback procedure from the merged branch.
+From `backend`, configure the target database without committing the connection string,
+then apply migrations before starting the API:
+
+```powershell
+$env:DATABASE_URL = "postgresql+psycopg://<user>:<password>@<host>:5432/<database>"
+alembic upgrade head
+uvicorn app.main:app --port 8000
+```
+
+The repository contains the migration configuration and initial schema revision. This
+runbook does not claim that a live PostgreSQL instance has been validated.
 
 Operational expectations for the merged migration path:
 
@@ -118,16 +127,14 @@ For local SQLite:
 | Corrupt or unwanted demo state | Stop backend, remove `backend\strata.db`, reseed. |
 | Missing tables | Rerun startup or `python -m app.seed_demo`; current local baseline creates tables automatically. |
 
-For hosted PostgreSQL: pending active backend merge. Do not invent credentials or
-connection strings. Use the deployment provider's database status, logs, and connection
-pool metrics once available.
+For hosted PostgreSQL, do not invent credentials or connection strings. Check the
+deployment provider's database status, connection limits, and application logs. Confirm
+that the configured `DATABASE_URL` uses the supported PostgreSQL driver form before
+rerunning `alembic upgrade head`.
 
 ## Migration Failure
 
-Pending active backend merge.
-
-Until Alembic lands, there is no migration command in this checkout. Once merged, the
-runbook should document:
+If an Alembic migration fails:
 
 | Failure point | Required response |
 | --- | --- |
@@ -168,6 +175,14 @@ Default deterministic coaching does not require AI.
 For public demos, prefer deterministic or tightly controlled hybrid behavior unless
 authentication, quotas, and cost controls exist.
 
+## Hosted Demo Read-Only Mode
+
+Set `PUBLIC_DEMO_MODE=true` on the backend for a shared public demo. Protected mutation
+endpoints return HTTP 403 with `Hosted demo is read-only.` while read endpoints remain
+available. Set `VITE_PUBLIC_DEMO_MODE=true` when building the frontend so mutation
+controls are disabled proactively and the read-only explanation is visible. The local
+application keeps the mutable workflow when this setting is false.
+
 ## Riot Unavailable
 
 Riot production access is unavailable until Riot approves the finished application. The
@@ -183,11 +198,11 @@ Expected behavior:
 
 ## Logs and Request IDs
 
-Pending observability merge.
+OpenTelemetry instrumentation and Grafana dashboards are still pending P1 work.
 
 Current local troubleshooting uses terminal output from Uvicorn, browser network
 details, and API error responses. Once request ID middleware and structured logging are
-merged, update this section with:
+implemented, update this section with:
 
 | Item | Required detail |
 | --- | --- |

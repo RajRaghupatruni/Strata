@@ -50,8 +50,11 @@ Synthetic demo data is entirely fictional and contains no real player informatio
 | Secrets in source control | No secret belongs in source control. Keep `.env`, local databases, dependency caches, and generated state ignored. Use blank placeholders in examples. |
 | Real player exposure | The initial public demo uses deterministic synthetic data only. It contains no real player information and needs no Riot credentials. |
 | Public shared writes | Restrict or disable public shared write access until authentication, authorization, and session isolation exist. A hosted read-only demo is safer than a shared mutable demo. |
+| Hosted demo writes | `PUBLIC_DEMO_MODE=true` makes protected mutation endpoints return HTTP 403 with `Hosted demo is read-only.` Read-only seeded coaching and progress remain available. |
 | Invalid input | Keep Pydantic/API validation at boundaries and reject malformed provider/import payloads before persistence. |
-| SQL safety | Use SQLAlchemy query construction rather than interpolated SQL. Run migrations deliberately once Alembic lands. |
+| SQL safety | Use SQLAlchemy query construction rather than interpolated SQL. Apply Alembic migrations deliberately before serving deployed code. |
+| Match duplication | Enforce external match ID uniqueness in the database and retain application-level duplicate handling for idempotent imports. |
+| Recommendation evidence integrity | Calculate effectiveness evidence and analytical outcomes on the backend. The client may update lifecycle state only and cannot fabricate recommendation effectiveness. |
 | CORS | Keep allowed origins explicit for local and deployed hosts. Do not use wildcard origins with credentials. |
 | Scraping/automation | Add hosting-level rate limiting, request size limits, and abuse monitoring before exposing mutable endpoints publicly. |
 | AI abuse/cost | Keep AI optional. Deterministic coaching must remain the default/core path. Add quotas or disable AI in public demos unless authenticated and budgeted. |
@@ -63,6 +66,6 @@ Synthetic demo data is entirely fictional and contains no real player informatio
 ## Residual Risk
 
 The first release should not be described as hardened multi-user infrastructure. Until
-authentication, session isolation, rate limiting, hosted observability, and migration
-operations are merged and exercised, the safest public demo posture is deterministic,
-synthetic, and tightly controlled.
+authentication, session isolation, rate limiting, hosted observability, and live
+PostgreSQL deployment operations are exercised, the safest public demo posture is
+deterministic, synthetic, read-only, and tightly controlled.

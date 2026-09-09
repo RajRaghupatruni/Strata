@@ -165,8 +165,9 @@ the harness, and the application checks passed. FastAPI emits its existing depre
 
 - Owner rotates the removed OpenAI key before publication, as planned.
 - Recreate local dependencies and seed state using the README when resuming development.
-- Continue the separate UI and recommendation/effectiveness workstreams; perform the
-  owner's final publication review before creating the first public commit.
+- The frontend recommendation/effectiveness integration and the backend recommendation
+  contract are now merged. Perform the owner's final publication review before creating
+  the first public commit.
 - Pursue Riot approval only for the optional real adapter; the demo does not depend on it.
 
 ## J. Next P0 blockers and limitations
@@ -177,6 +178,8 @@ limits, not claims of production readiness:
 - The fixture is a reduced consumed Riot-like projection, not full official DTO conformance.
 - Real content UUID/map-alias resolution remains incomplete and needs approved payload testing.
 - Map and agent are paired in the fixture, so their independent causal effects cannot be inferred.
-- Duplicate skipping is sequential; the current schema has no database-level unique external ID.
-- Recommendation/effectiveness schema and semantics remain for the next backend workstream.
+- External match IDs are protected by a database-level uniqueness constraint as well as
+  application-level duplicate handling.
+- Recommendations persist as first-class records, with deterministic sample-aware
+  effectiveness evidence (`insufficient_data`, `directional`, and `supported`).
 - No authentication, multi-user isolation, hosted infrastructure, or scalability claims were added.

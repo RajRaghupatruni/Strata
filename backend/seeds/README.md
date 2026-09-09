@@ -56,6 +56,7 @@ From `backend`, with dependencies installed: `python -m app.seed_demo`.
 Repeated runs skip existing external match IDs and retain other state. The command
 validates the whole fixture before writing, permits only the default local SQLite
 target/environment unless explicitly overridden, and never calls Riot or OpenAI.
-Concurrent import serialization is not guaranteed by the existing schema; duplicate
-skipping covers sequential runs and duplicates within a batch, not a database uniqueness
-constraint. This is a local single-user command.
+Concurrent import serialization is not a substitute for the database constraint: external
+match IDs are enforced unique in the schema, while duplicate skipping still provides
+clear idempotent behavior for sequential runs and duplicates within a batch. This remains
+a local single-user command.
