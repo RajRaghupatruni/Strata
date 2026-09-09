@@ -148,6 +148,11 @@ python scripts/smoke_test_phase2.py
 - Seeding produced `40 inserted / 0 skipped`, then `0 inserted / 40 skipped`.
 - Backend imports, OpenAPI generation, startup, health, matches, insights, home, review,
   settings, coaching, pro brief, and progress HTTP workflows passed without either API key.
+- Docker PostgreSQL 16 validation passed: all services became healthy, Alembic used
+  `PostgresqlImpl` at `20260908_0001 (head)`, repeat seeding reached 40 matches with
+  `0 inserted / 40 skipped`, and the dedicated smoke test confirmed 8 tables, 17
+  indexes, JSONB support, uniqueness, foreign keys, one recommendation, and progress
+  evidence. This is local container validation, not cloud production load validation.
 - Offline unit tests rejected network calls. Live HTTP checks allowed loopback traffic
   only and observed zero external connections. Unconfigured Riot import returned HTTP 400.
 - A clean frontend dependency install and TypeScript/Vite production build passed.

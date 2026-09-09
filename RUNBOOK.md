@@ -85,6 +85,7 @@ docker compose run --rm backend python -m app.seed_demo --allow-nonlocal
 docker compose run --rm backend python scripts/smoke_test_postgres.py --repeat-seed
 Invoke-WebRequest http://localhost:5173 -UseBasicParsing
 Invoke-RestMethod http://localhost:8000/health
+Invoke-RestMethod http://localhost:8000/ready
 Invoke-RestMethod http://localhost:8000/api/v1/home/summary
 Invoke-RestMethod http://localhost:8000/api/v1/coach/latest
 Invoke-RestMethod http://localhost:8000/api/v1/recommendations
@@ -97,6 +98,13 @@ The seed output should report 40 inserted matches on a fresh database; the repea
 seed in the validation command should report zero new matches and at least 40 skips.
 The endpoint responses provide host-level backend smoke coverage, while the frontend
 request confirms nginx serves the production bundle.
+
+Validated locally with Docker PostgreSQL 16: all Compose services became healthy,
+`alembic current` reported `20260908_0001 (head)` using `PostgresqlImpl`, and the
+PostgreSQL smoke test reported `tables=8`, `indexes=17`, `matches=40`,
+`recommendations=1`, `progress=1`, `progress_with_evidence=1`, `jsonb=ok`,
+`unique=ok`, and `foreign_keys=ok`. This is local container validation, not cloud
+production load validation.
 
 ## Demo Data Reset and Seeding
 
@@ -136,7 +144,7 @@ uvicorn app.main:app --port 8000
 ```
 
 The repository contains the migration configuration and initial schema revision. The
-containerized validation command above is the repeatable live PostgreSQL smoke path.
+containerized validation command above is the repeatable local PostgreSQL smoke path.
 
 Operational expectations for the merged migration path:
 

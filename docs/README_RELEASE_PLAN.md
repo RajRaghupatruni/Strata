@@ -37,8 +37,9 @@ file defines the remaining target README structure and claims that need cleanup.
 
 7. Architecture diagram
    - Reuse or condense the Mermaid diagram from `ARCHITECTURE.md`.
-   - State that PostgreSQL is the hosted/production target and Alembic owns migrations;
-     do not imply that a live PostgreSQL environment has already been validated.
+   - State that PostgreSQL is the hosted/production target and Alembic owns migrations.
+   - Note the completed local Docker PostgreSQL 16 validation without implying cloud
+     production load validation.
 
 8. One-command local setup
    - Finalize after package/install expectations settle.
@@ -89,7 +90,7 @@ file defines the remaining target README structure and claims that need cleanup.
 | Long phase-by-phase implementation history | Condense into current product capabilities and evidence. Senior reviewers need what exists now, not every phase label. |
 | Riot import endpoint details | Keep only with clear caveat: requires approved Riot access and credentials, not available in the initial public demo. |
 | Progress/recommendation effectiveness | Explain that effectiveness requires future evidence after recommendations. Do not imply seeded proof of coaching success. |
-| PostgreSQL/Alembic | Describe as implemented hosted/production persistence and migration support. Do not claim live PostgreSQL validation or final deployment readiness. |
+| PostgreSQL/Alembic | Describe as implemented hosted/production persistence and migration support, with local Docker PostgreSQL 16 validation completed. Do not imply final cloud deployment or load validation. |
 | Deployment | Add only after public hosting exists. Do not invent URLs, scaling behavior, or rollback commands. |
 | Observability | Add exact request ID/logging behavior only after merged. |
 | Test evidence | Refresh with actual commands and results from the release candidate. Do not invent coverage or performance numbers. |

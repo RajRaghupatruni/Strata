@@ -53,7 +53,7 @@ or phrase guidance when configured, but it does not own statistical facts.
 | --- | --- |
 | Frontend | React + TypeScript application with Home, Matches, Insights, Review, Coach, Progress, and Settings surfaces. |
 | Backend | FastAPI routes organized by feature area, backed by SQLAlchemy models and services. |
-| Persistence | SQLAlchemy supports SQLite for local/test workflows and PostgreSQL for hosted/production deployments. Alembic owns schema evolution. Live PostgreSQL validation is not claimed here. |
+| Persistence | SQLAlchemy supports SQLite for local/test workflows and PostgreSQL for hosted/production deployments. Alembic owns schema evolution. Docker PostgreSQL 16 validation passed locally; this is not cloud production load validation. |
 | Database integrity | External match IDs are enforced unique at the database layer, with application-level duplicate handling retained for clear import behavior. |
 | Ingestion | Synthetic provider and retained Riot adapter feed shared payload validation, normalization, and match persistence. |
 | Demo data | `python -m app.seed_demo` imports 40 deterministic fictional matches. Repeat runs skip existing demo match IDs. |
@@ -127,8 +127,10 @@ consume.
 SQLAlchemy stores normalized matches, review notes, issue tags, coaching reports,
 persisted recommendations, progress snapshots, and profile context. PostgreSQL is the
 supported hosted/production database and Alembic provides explicit schema migrations.
-SQLite remains useful for lightweight local and test workflows. This document does not
-claim that a live PostgreSQL environment has been exercised.
+Local Docker PostgreSQL 16 validation reached migration head `20260908_0001`, confirmed
+the readiness path, and passed the dedicated schema/data smoke checks. SQLite remains
+useful for lightweight local and test workflows. No cloud production load validation is
+claimed.
 
 ## Deterministic Analytics and AI
 
