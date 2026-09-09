@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     environment: str = "local"
     database_url: str = "sqlite:///./strata.db"
     public_demo_mode: bool = False
+    seed_demo_on_start: bool = False
+    cors_allowed_origins: str = ""
     riot_api_key: str | None = None
     riot_default_region: str = "na"
     coaching_ai_enabled: bool = False

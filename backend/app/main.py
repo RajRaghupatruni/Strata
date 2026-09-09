@@ -21,6 +21,16 @@ from app.core.observability import (
 configure_logging(settings.log_level, settings.log_format)
 
 
+def cors_origins() -> list[str]:
+    defaults = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    configured = [
+        origin.strip()
+        for origin in settings.cors_allowed_origins.split(",")
+        if origin.strip() and origin.strip() != "*"
+    ]
+    return list(dict.fromkeys(defaults + configured))
+
+
 def initialize_local_schema() -> None:
     if (
         settings.database_url.startswith("sqlite")
@@ -45,7 +55,7 @@ app = FastAPI(
 app.add_middleware(RequestObservabilityMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
