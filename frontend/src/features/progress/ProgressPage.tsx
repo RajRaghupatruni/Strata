@@ -5,6 +5,7 @@ import { PublicDemoReadOnlyError, usePublicDemoReadOnly } from "../../services/a
 import type { Recommendation } from "../../types/recommendation";
 
 import { PageHeader } from "../../components/PageHeader";
+import { GameVisual } from "../../components/GameVisual";
 import { StatePanel } from "../../components/StatePanel";
 import {
   fetchLatestProgressSnapshot,
@@ -106,6 +107,7 @@ function RecommendationLifecycle({ evidence, recommendation, contextLoading }: {
     ["Outcome", statusLabel(evidence?.outcome ?? "insufficient_data")],
     ["Explanation", evidence?.explanation ?? "No saved evaluation yet. In the local app, generate a snapshot for this recommendation."]
   ];
+  const stepIcons = ["◌", "◉", "↓", "◈", "✓", "·"];
   return (
     <section className="surface-strong panel-padding">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -124,9 +126,9 @@ function RecommendationLifecycle({ evidence, recommendation, contextLoading }: {
       </div>
       <p className="microcopy mt-3">Evidence compares matches before and after this recommendation became active{recommendation ? ` on ${formatDate(recommendation.active_at)}` : ""}. Current status may differ from a historical snapshot's outcome.</p>
       <div className="workflow-line mt-6">
-        {steps.map(([title, body]) => (
+        {steps.map(([title, body], index) => (
           <article key={title} className="workflow-step">
-            <p className="label">{title}</p>
+            <div className="visual-inline"><GameVisual kind="metric" value={stepIcons[index]} /><p className="label">{title}</p></div>
             <p className="mt-3 text-sm leading-6 text-[var(--text-soft)]">{body}</p>
           </article>
         ))}

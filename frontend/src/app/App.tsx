@@ -18,13 +18,13 @@ import { SettingsPage } from "../features/settings/SettingsPage";
 import { PUBLIC_DEMO_MESSAGE, usePublicDemoReadOnly } from "../services/api/demoMode";
 
 const links = [
-  { to: "/", label: "Home", hotkey: "1", summary: "What matters now" },
-  { to: "/matches", label: "Matches", hotkey: "2", summary: "Browse history" },
-  { to: "/insights", label: "Insights", hotkey: "3", summary: "Read the trend" },
-  { to: "/review", label: "Review", hotkey: "4", summary: "Tag the cause" },
-  { to: "/coach", label: "Coach", hotkey: "5", summary: "Plan the session" },
-  { to: "/progress", label: "Progress", hotkey: "6", summary: "Close the loop" },
-  { to: "/settings", label: "Settings", hotkey: "7", summary: "Player context" }
+  { to: "/", label: "Home", hotkey: "1", summary: "What matters now", icon: "⌂" },
+  { to: "/matches", label: "Matches", hotkey: "2", summary: "Browse history", icon: "◫" },
+  { to: "/insights", label: "Insights", hotkey: "3", summary: "Read the trend", icon: "⌁" },
+  { to: "/review", label: "Review", hotkey: "4", summary: "Tag the cause", icon: "⊞" },
+  { to: "/coach", label: "Coach", hotkey: "5", summary: "Plan the session", icon: "♧" },
+  { to: "/progress", label: "Progress", hotkey: "6", summary: "Close the loop", icon: "↗" },
+  { to: "/settings", label: "Settings", hotkey: "7", summary: "Player context", icon: "⚙" }
 ];
 
 function Brand() {
@@ -51,9 +51,12 @@ function Navigation() {
           end={link.to === "/"}
           className={({ isActive }) => `nav-link ${isActive ? "nav-link-active" : ""}`}
         >
-          <span>
+          <span className="nav-item-copy">
+            <span className="nav-icon" aria-hidden="true">{link.icon}</span>
+            <span>
             <span className="nav-label">{link.label}</span>
             <span className="nav-summary">{link.summary}</span>
+            </span>
           </span>
           <span className="kbd" aria-label={`Alt ${link.hotkey}`}>
             {link.hotkey}
@@ -100,10 +103,8 @@ function AppShell() {
             <Navigation />
           </div>
           <div className="sidebar-note">
-            <p className="label">Local first</p>
-            <p className="microcopy mt-2">
-              Deterministic analytics form the evidence. Coaching explains what to do with it.
-            </p>
+            <p className="label">The Strata loop</p>
+            <p className="microcopy mt-2">Better players build with data. Turn your games into growth.</p>
           </div>
         </aside>
 

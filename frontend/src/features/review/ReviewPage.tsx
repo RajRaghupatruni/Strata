@@ -2,6 +2,7 @@ import { usePublicDemoReadOnly } from "../../services/api/demoMode";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "../../components/PageHeader";
+import { GameLabel, GameVisual } from "../../components/GameVisual";
 import { StatePanel } from "../../components/StatePanel";
 import {
   createReviewNote,
@@ -90,7 +91,7 @@ function MatchContext({ match }: { match?: Match }) {
   return (
     <div className="surface panel-padding">
       <p className="eyebrow">Match context</p>
-      <h2 className="section-title mt-3">{match.map_name ?? "Unknown map"} with {match.agent ?? "unknown agent"}</h2>
+      <div className="game-context mt-3"><GameVisual kind="agent" value={match.agent} size="md" /><div className="game-context-copy"><h2 className="section-title">{match.agent ?? "Unknown agent"}</h2><small><GameLabel kind="map" value={match.map_name} /> · {match.role ?? "No role"}</small></div></div>
       <p className="section-copy">{formatDate(match.played_at)}</p>
       <div className="mt-5 grid grid-cols-3 gap-3 max-sm:grid-cols-1">
         <div className="surface-subtle p-3">
@@ -127,7 +128,7 @@ function IssueSummary({ issues }: { issues: RecurringIssue[] }) {
           <article key={issue.category} className="data-row p-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-base font-semibold text-[var(--text)]">{humanize(issue.category)}</p>
+                <div className="visual-inline"><GameVisual kind="metric" value="!" /><p className="text-base font-semibold text-[var(--text)]">{humanize(issue.category)}</p></div>
                 <p className="section-copy">Last seen {formatDate(issue.last_seen_at)}</p>
               </div>
               <div className="text-right">

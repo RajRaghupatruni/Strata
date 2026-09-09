@@ -257,7 +257,7 @@ export function CoachPage() {
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
               <div>
                 <p className="eyebrow">Report #{latest.id} · Coaching context</p>
-                <h2 className="mt-4 max-w-4xl text-[clamp(2.4rem,5vw,5.3rem)] font-[720] leading-[0.95] tracking-[0] text-[var(--text)]">
+                <h2 className="coach-priority-title mt-4 max-w-4xl">
                   {latest.priority_issue || "No priority issue generated"}
                 </h2>
                 <p className="section-copy mt-5">

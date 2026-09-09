@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { Recommendation, UserRecommendationStatus } from "../types/recommendation";
+import { GameVisual } from "./GameVisual";
 
 export function isAnalyticalStatus(status: string) {
   return ["effective", "ineffective", "inconclusive"].includes(status);
@@ -28,7 +29,7 @@ export function RecommendationCard({ recommendation, primary = false, readOnly, 
         <span className="chip chip-accent">{primary ? "Primary recommendation" : "Supporting recommendation"} #{recommendation.id}</span>
         <span className="chip">{analytical ? "Analytical outcome" : "Lifecycle"}: {statusLabel(recommendation.status)}</span>
       </div>
-      <h2 className={primary ? "section-title mt-4" : "mt-4 text-lg font-semibold"}>{recommendation.title}</h2>
+      <div className="game-context mt-4"><GameVisual kind="metric" value="↗" size="md" /><div className="game-context-copy"><h2 className={primary ? "section-title" : "text-lg font-semibold"}>{recommendation.title}</h2><small>{recommendation.target_issue_category ? `Target · ${recommendation.target_issue_category.replace(/_/g, " ")}` : "Evidence-led coaching action"}</small></div></div>
       <p className="mt-3 whitespace-pre-line text-lg leading-8 text-[var(--text-soft)]">{recommendation.action}</p>
       <div className="mt-5">
         <p className="label">Why this recommendation exists</p>

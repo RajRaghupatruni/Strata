@@ -2,6 +2,7 @@ import { usePublicDemoReadOnly } from "../../services/api/demoMode";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "../../components/PageHeader";
+import { GameLabel, GameVisual } from "../../components/GameVisual";
 import { StatePanel } from "../../components/StatePanel";
 import { fetchMatches, importMatchesFromRiot } from "../../services/api/client";
 import type { Match, MatchFilters } from "../../types/match";
@@ -78,9 +79,9 @@ function MatchCard({
         <div>
           <div className="chip-row">
             <span className={`chip ${resultChip(match.result)}`}>{formatShortResult(match.result)}</span>
-            <span className="chip chip-accent">{match.map_name ?? "Unknown map"}</span>
-            <span className="chip">{match.agent ?? "Unknown agent"}</span>
-            <span className="chip">{match.role ?? "No role"}</span>
+            <span className="chip chip-accent"><GameVisual kind="map" value={match.map_name} />{match.map_name ?? "Unknown map"}</span>
+            <span className="chip"><GameVisual kind="agent" value={match.agent} />{match.agent ?? "Unknown agent"}</span>
+            <span className="chip"><GameVisual kind="role" value={match.role} />{match.role ?? "No role"}</span>
           </div>
           <p className="mt-3 text-sm text-[var(--text-muted)]">{formatPlayedAt(match.played_at)}</p>
         </div>
@@ -128,9 +129,7 @@ function MatchInspector({ match }: { match?: Match }) {
         <span className={`chip ${resultChip(match.result)}`}>{formatShortResult(match.result)}</span>
         <span className="chip chip-accent">Match #{match.id}</span>
       </div>
-      <h2 className="section-title mt-5">
-        {match.map_name ?? "Unknown map"} with {match.agent ?? "unknown agent"}
-      </h2>
+      <div className="game-context mt-5"><GameVisual kind="agent" value={match.agent} size="md" /><div className="game-context-copy"><h2 className="section-title">{match.agent ?? "Unknown agent"}</h2><small><GameLabel kind="map" value={match.map_name} /> · {match.role ?? "No role"}</small></div></div>
       <p className="section-copy">{formatPlayedAt(match.played_at)}</p>
 
       <div className="mt-6 grid grid-cols-2 gap-3">

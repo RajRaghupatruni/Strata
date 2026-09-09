@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "../../components/PageHeader";
+import { GameVisual } from "../../components/GameVisual";
 import { StatePanel } from "../../components/StatePanel";
 import { fetchInsights } from "../../services/api/client";
 import type { BreakdownEntry, InsightsResponse, MetricDelta } from "../../types/insights";
@@ -102,8 +103,7 @@ function BreakdownSection({ title, question, rows }: { title: string; question: 
             <article key={row.label} className="data-row p-4">
               <div className="grid gap-4 md:grid-cols-[1fr_120px_120px_120px] md:items-center">
                 <div>
-                  <p className="text-base font-semibold text-[var(--text)]">{row.label}</p>
-                  <p className="section-copy">{row.matches} matches</p>
+                  <div className="game-context"><GameVisual kind={title === "Agent fit" ? "agent" : title === "Role stability" ? "role" : "map"} value={row.label} /><div className="game-context-copy"><strong>{row.label}</strong><small>{row.matches} matches</small></div></div>
                   <div className="mt-3 progress-track" aria-label={`${row.label} win rate ${formatNumber(row.win_rate, "%")}`}>
                     <div className="progress-fill" style={{ width: `${Math.min(100, Math.max(0, row.win_rate ?? 0))}%` }} />
                   </div>
