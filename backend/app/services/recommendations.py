@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models import IssueTag, Match, Recommendation, ReviewNote
 from app.schemas.recommendation import RecommendationRead
+from app.core.observability import RECOMMENDATION_EVALUATION_DURATION, timed
 
 
 MIN_DIRECTIONAL_SAMPLES = 3
@@ -244,6 +245,7 @@ def _performance_metric_evaluation(
     }
 
 
+@timed(RECOMMENDATION_EVALUATION_DURATION)
 def evaluate_recommendation_effectiveness(
     db: Session, recommendation_id: int, sample_window: int = 10
 ) -> dict[str, Any]:
@@ -272,4 +274,3 @@ def evaluate_recommendation_effectiveness(
         recommendation.status = result["outcome"]
     db.add(recommendation)
     return result
-
