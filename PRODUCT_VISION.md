@@ -177,7 +177,7 @@ A single serious ranked Valorant player using the app privately on their own mac
 
 ---
 
-## First-Phase Product Scope
+## Initial Product Scope
 
 The first build is private and single-user, but should still include the full feature set we want in the long-term product, except for public-user infrastructure.
 

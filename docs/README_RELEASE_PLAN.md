@@ -87,7 +87,7 @@ file defines the remaining target README structure and claims that need cleanup.
 | --- | --- |
 | "AI-first real-time coaching mode" | Avoid "real-time" unless the product supports live/streaming or in-session semantics. Prefer "AI-first coaching mode" and state it requires explicit credentials. |
 | "Smart upgrade workflows" | Reframe as optional/current capabilities and planned directions. The phrase reads promotional and mixes implemented and future behavior. |
-| Long phase-by-phase implementation history | Condense into current product capabilities and evidence. Senior reviewers need what exists now, not every phase label. |
+| Long implementation history | Condense into current product capabilities and evidence. Readers need what exists now, not an internal sequence of delivery steps. |
 | Riot import endpoint details | Keep only with clear caveat: requires approved Riot access and credentials, not available in the initial public demo. |
 | Progress/recommendation effectiveness | Explain that effectiveness requires future evidence after recommendations. Do not imply seeded proof of coaching success. |
 | PostgreSQL/Alembic | Describe as implemented hosted/production persistence and migration support, with local Docker PostgreSQL 16 validation completed. Do not imply final cloud deployment or load validation. |

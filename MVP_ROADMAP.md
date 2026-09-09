@@ -44,16 +44,16 @@ Avoid fake placeholder product behavior where possible.
 Do not add social or decorative features early.
 
 ### 3. Ship vertically
-Each phase should produce something visible and usable.
+Each capability slice should produce something visible and usable.
 
 ### 4. Preserve future extensibility
 The MVP should not create dead-end architecture.
 
 ---
 
-## MVP Phases
+## MVP Capability Areas
 
-## Phase 1: Foundation
+## Foundation
 
 ### Objective
 Create the project structure and local app foundation.
@@ -72,7 +72,7 @@ A running local app with real structure but minimal business features.
 
 ---
 
-## Phase 2: Match Data Hub
+## Match Data Hub
 
 ### Objective
 Create the first working version of the match ingestion and storage flow.
@@ -91,7 +91,7 @@ The user can load and browse their match history locally.
 
 ---
 
-## Phase 3: Insights Engine
+## Insights Engine
 
 ### Objective
 Turn stored match data into useful analysis.
@@ -111,7 +111,7 @@ The user can see meaningful patterns rather than raw records only.
 
 ---
 
-## Phase 4: Review Workspace
+## Review Workspace
 
 ### Objective
 Allow structured review and note-taking for matches.
@@ -130,7 +130,7 @@ The user can attach meaningful review history to gameplay.
 
 ---
 
-## Phase 5: Coaching Engine v1
+## Coaching Engine v1
 
 ### Objective
 Generate useful recommendations from analysis and review data.
@@ -154,7 +154,7 @@ The app starts acting like a personal performance coach.
 
 ---
 
-## Phase 6: Progress Tracking
+## Progress Tracking
 
 ### Objective
 Measure whether the user's patterns and recommendations are improving over time.
@@ -172,7 +172,7 @@ The app becomes a closed-loop improvement system instead of a one-time analyzer.
 
 ---
 
-## Phase 7: Personal Context Layer
+## Personal Context Layer
 
 ### Objective
 Store user-specific goals and persistent preferences.
@@ -191,7 +191,7 @@ The coaching and analysis become more personalized.
 
 ---
 
-## Phase 8: Home Command Center
+## Home Command Center
 
 ### Objective
 Create a polished front page that ties the product together.
@@ -210,7 +210,7 @@ The app feels cohesive and operational as a daily-use product.
 
 ---
 
-## Phase 9: UX Refinement
+## UX Refinement
 
 ### Objective
 Upgrade the app from functional to polished.
@@ -264,7 +264,7 @@ The app feels premium and intentional.
 
 ---
 
-## Recommended Build Order
+## Recommended Delivery Order
 
 ### Step 1
 Foundation and app shell

@@ -17,40 +17,40 @@ Implemented foundation:
 - backend scaffold (`FastAPI`, modular route domains, SQLite wiring, core models)
 - frontend scaffold (`React + TypeScript + Tailwind`, app shell + feature routes)
 - local-first monorepo layout ready for MVP vertical slices
-- Phase 2 match workflows:
+- Match workflows:
   - `POST /api/v1/matches/import` (validated JSON import + duplicate skip by `external_match_id`)
   - `GET /api/v1/matches` (filters: `map`, `agent`, `role`, `result`, `start_date`, `end_date`)
   - `GET /api/v1/matches/{match_id}`
   - `Matches` page wired to live backend data
   - 40 fictional Riot-like payloads, guarded demo seed command, and smoke test script
-- Phase 3 insights workflows:
+- Insights workflows:
   - deterministic insights service for recent form, map/agent/role breakdowns, streaks, trends, and volatility
   - `GET /api/v1/insights?recent_window=10`
   - Insights page wired to live API output
-- Phase 4 review workflows:
+- Review workflows:
   - review note CRUD (`add`, `edit`, `delete`)
   - issue tag flow (embedded tags on notes + standalone add/delete tag endpoints)
   - recurring issue grouping endpoint
   - Review page wired to live API (note editor + match filter + recurring issue table)
   - match detail integration via `review_note_count` on `GET /api/v1/matches/{match_id}`
-- Phase 5 coaching workflows:
+- Coaching workflows:
   - multi-mode coaching engine (`deterministic`, `hybrid`, `ai_first`)
   - `POST /api/v1/coach/generate`
   - `GET /api/v1/coach/latest`
   - `GET /api/v1/coach/reports`
   - Coach page wired to generate/view latest report + history
-- Phase 6 progress workflows:
+- Progress workflows:
   - deterministic progress snapshot generator (`before-vs-after metrics`, `issue recurrence deltas`, `recommendation effectiveness`)
   - `POST /api/v1/progress/generate`
   - `GET /api/v1/progress/latest`
   - `GET /api/v1/progress`
   - Progress page wired to generate/view latest snapshot + history
-- Phase 7 personal context workflows:
+- Personal context workflows:
   - persistent user profile context (`display name`, `target rank`, `preferred agents/roles`, `known weak areas`, `improvement priorities`, `notes`)
   - `GET /api/v1/settings/profile`
   - `PUT /api/v1/settings/profile`
   - Settings page wired to load/edit/save profile context
-- Phase 8 home command center workflows:
+- Home command center workflows:
   - consolidated home summary endpoint (`matches + insights + coaching + progress + review gap`)
   - `GET /api/v1/home/summary`
   - Home page wired to:
@@ -61,7 +61,7 @@ Implemented foundation:
     - coaching summary
     - progress highlight
     - counters + quick links
-- Phase 9 UX refinement workflows:
+- UX refinement workflows:
   - consistent page header hierarchy across all feature surfaces
   - standardized loading/error/empty/success state panels
   - improved shell navigation styling with keyboard shortcuts (`Alt+1..7`)
@@ -225,7 +225,7 @@ Requirements:
 - `riot_api_key` configured in `backend/.env`
 - valid Riot region: `na`, `eu`, `ap`, `kr`, `latam`, `br`, `esports`
 
-## Smoke Test (Phase 2)
+## Local API Smoke Test
 
 After seeding, with the backend running:
 
@@ -239,7 +239,7 @@ This script:
 2. verifies populated match history without modifying it
 3. reads back `GET /api/v1/matches?limit=10`
 
-## Insights API (Phase 3)
+## Insights API
 
 Endpoint:
 
@@ -259,7 +259,7 @@ Open in browser while backend is running:
 
 `http://127.0.0.1:8000/api/v1/insights?recent_window=10`
 
-## Review API (Phase 4)
+## Review API
 
 Endpoints:
 - `GET /api/v1/review/notes?match_id=1`
@@ -271,7 +271,7 @@ Endpoints:
 - `DELETE /api/v1/review/tags/{tag_id}`
 - `GET /api/v1/review/issues/recurring`
 
-## Coach API (Phase 5)
+## Coach API
 
 Endpoints:
 - `POST /api/v1/coach/generate` with body `{ "recent_window": 10 }`
@@ -279,7 +279,7 @@ Endpoints:
 - `GET /api/v1/coach/latest`
 - `GET /api/v1/coach/reports?limit=10`
 
-The Phase 5 engine supports deterministic-only, hybrid, and AI-first modes.
+The coaching engine supports deterministic-only, hybrid, and AI-first modes.
 
 ### Coaching Intelligence Modes
 
@@ -307,20 +307,20 @@ Purpose:
 - Includes strengths, role fit, limiting patterns, harsh truths, priority improvements, and a weekly program.
 - Optional `match_id` triggers one-game deep breakdown.
 
-## Progress API (Phase 6)
+## Progress API
 
 Endpoints:
 - `POST /api/v1/progress/generate` with body `{ "recent_window": 10, "previous_window": 10 }`
 - `GET /api/v1/progress/latest`
 - `GET /api/v1/progress?limit=10`
 
-## Settings API (Phase 7)
+## Settings API
 
 Endpoints:
 - `GET /api/v1/settings/profile`
 - `PUT /api/v1/settings/profile`
 
-## Home API (Phase 8)
+## Home API
 
 Endpoints:
 - `GET /api/v1/home/summary?recent_window=10`
@@ -339,4 +339,4 @@ From `frontend`: `npm ci` then `npm run build`.
 
 ## Guiding Principle
 
-Build each phase vertically so every step becomes usable in the UI, not just structurally complete.
+Build each capability vertically so every step becomes usable in the UI, not just structurally complete.

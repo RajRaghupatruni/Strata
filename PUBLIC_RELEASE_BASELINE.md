@@ -1,4 +1,4 @@
-# First-publication baseline handoff
+# First-publication baseline
 
 Completed September 8, 2026. No commit, remote, push, or publication was performed.
 
@@ -177,7 +177,7 @@ the harness, and the application checks passed. FastAPI emits its existing depre
 
 ## J. Next P0 blockers and limitations
 
-No blocker was found for the next local P0 workstream. The following are documented
+No blocker was found for the next local P0 integration. The following are documented
 limits, not claims of production readiness:
 
 - The fixture is a reduced consumed Riot-like projection, not full official DTO conformance.
