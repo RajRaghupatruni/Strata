@@ -1,17 +1,27 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, Integer, String, Text
-from sqlalchemy.sql import func
+from sqlalchemy import DateTime, Float, Index, Integer, String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
+from sqlalchemy.types import JSON
 
 from app.models.base import Base
 
 
+json_type = JSON().with_variant(JSONB(), "postgresql")
+
+
 class Match(Base):
     __tablename__ = "matches"
+    __table_args__ = (
+        UniqueConstraint("external_match_id", name="uq_matches_external_match_id"),
+        Index("ix_matches_played_at_id", "played_at", "id"),
+        Index("ix_matches_session_id", "session_id"),
+    )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    external_match_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    external_match_id: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
     played_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     map_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
     mode: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -28,11 +38,10 @@ class Match(Base):
     rr_change: Mapped[int | None] = mapped_column(Integer, nullable=True)
     rank_at_time: Mapped[str | None] = mapped_column(String(50), nullable=True)
     session_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[dict | None] = mapped_column(json_type, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
-

@@ -71,6 +71,8 @@ def _worst_entry(entries: list[dict], min_matches: int = 2) -> dict | None:
 
 
 def _safe_load_dict(raw: str | None) -> dict:
+    if isinstance(raw, dict):
+        return raw
     if not raw:
         return {}
     try:
@@ -224,4 +226,3 @@ def home_summary(
         counters=counters,
         quick_links=["/matches", "/insights", "/review", "/coach", "/progress", "/settings"],
     )
-

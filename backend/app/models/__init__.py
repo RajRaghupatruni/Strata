@@ -3,6 +3,7 @@ from app.models.coaching_report import CoachingReport
 from app.models.issue_tag import IssueTag
 from app.models.match import Match
 from app.models.progress_snapshot import ProgressSnapshot
+from app.models.recommendation import Recommendation
 from app.models.review_note import ReviewNote
 from app.models.user_profile import UserProfile
 
@@ -13,6 +14,6 @@ __all__ = [
     "IssueTag",
     "CoachingReport",
     "ProgressSnapshot",
+    "Recommendation",
     "UserProfile",
 ]
-

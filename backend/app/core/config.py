@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     app_name: str = "Strata"
     environment: str = "local"
     database_url: str = "sqlite:///./strata.db"
+    public_demo_mode: bool = False
     riot_api_key: str | None = None
     riot_default_region: str = "na"
     coaching_ai_enabled: bool = False

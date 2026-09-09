@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import case, delete, func, select
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import require_writable_demo
 from app.core.database import get_db
 from app.models import IssueTag, Match, ReviewNote
 from app.schemas.review import (
@@ -105,7 +106,12 @@ def get_note(note_id: int, db: Session = Depends(get_db)) -> ReviewNoteRead:
     return _to_note_read(note, grouped.get(note.id, []))
 
 
-@router.post("/notes", response_model=ReviewNoteRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/notes",
+    response_model=ReviewNoteRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writable_demo)],
+)
 def create_note(payload: ReviewNoteCreate, db: Session = Depends(get_db)) -> ReviewNoteRead:
     if payload.match_id is not None:
         match_exists = db.scalar(select(Match.id).where(Match.id == payload.match_id))
@@ -134,7 +140,11 @@ def create_note(payload: ReviewNoteCreate, db: Session = Depends(get_db)) -> Rev
     return _to_note_read(note, grouped.get(note.id, []))
 
 
-@router.put("/notes/{note_id}", response_model=ReviewNoteRead)
+@router.put(
+    "/notes/{note_id}",
+    response_model=ReviewNoteRead,
+    dependencies=[Depends(require_writable_demo)],
+)
 def update_note(note_id: int, payload: ReviewNoteUpdate, db: Session = Depends(get_db)) -> ReviewNoteRead:
     note = db.scalar(select(ReviewNote).where(ReviewNote.id == note_id))
     if note is None:
@@ -168,7 +178,11 @@ def update_note(note_id: int, payload: ReviewNoteUpdate, db: Session = Depends(g
     return _to_note_read(note, grouped.get(note.id, []))
 
 
-@router.delete("/notes/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/notes/{note_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_writable_demo)],
+)
 def delete_note(note_id: int, db: Session = Depends(get_db)) -> Response:
     note = db.scalar(select(ReviewNote).where(ReviewNote.id == note_id))
     if note is None:
@@ -180,7 +194,12 @@ def delete_note(note_id: int, db: Session = Depends(get_db)) -> Response:
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/notes/{note_id}/tags", response_model=IssueTagRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/notes/{note_id}/tags",
+    response_model=IssueTagRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writable_demo)],
+)
 def add_tag_to_note(note_id: int, payload: IssueTagCreate, db: Session = Depends(get_db)) -> IssueTagRead:
     note = db.scalar(select(ReviewNote).where(ReviewNote.id == note_id))
     if note is None:
@@ -200,7 +219,11 @@ def add_tag_to_note(note_id: int, payload: IssueTagCreate, db: Session = Depends
     return _to_issue_tag_read(tag)
 
 
-@router.delete("/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/tags/{tag_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_writable_demo)],
+)
 def delete_tag(tag_id: int, db: Session = Depends(get_db)) -> Response:
     tag = db.scalar(select(IssueTag).where(IssueTag.id == tag_id))
     if tag is None:

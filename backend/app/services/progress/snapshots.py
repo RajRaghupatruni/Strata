@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import json
 from collections import defaultdict
 from datetime import timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import CoachingReport, IssueTag, Match, ProgressSnapshot
+from app.models import IssueTag, Match, ProgressSnapshot, Recommendation
+from app.services.recommendations import evaluate_recommendation_effectiveness
 
 
 def _match_sort_key(match: Match) -> tuple[int, int]:
@@ -139,62 +139,36 @@ def _issue_trends(db: Session, recent_match_ids: list[int], previous_match_ids: 
     return trends
 
 
-def _recommendation_effectiveness(db: Session, all_matches: list[Match], window: int) -> dict:
-    report = db.scalar(
-        select(CoachingReport)
-        .order_by(CoachingReport.generated_at.desc(), CoachingReport.id.desc())
+def _latest_recommendation(db: Session) -> Recommendation | None:
+    return db.scalar(
+        select(Recommendation)
+        .order_by(Recommendation.active_at.desc(), Recommendation.id.desc())
         .limit(1)
     )
-    if report is None:
+
+
+def _recommendation_effectiveness(db: Session, recommendation_id: int | None, window: int) -> dict:
+    recommendation = db.get(Recommendation, recommendation_id) if recommendation_id else _latest_recommendation(db)
+    if recommendation is None:
         return {
-            "evaluated": False,
+            "recommendation_id": None,
+            "recommendation": "",
+            "evaluation_metric": "none",
+            "before_sample_size": 0,
+            "after_sample_size": 0,
+            "before_value": None,
+            "after_value": None,
+            "delta": None,
+            "evidence_level": "insufficient_data",
+            "outcome": "insufficient_data",
+            "explanation": "Generate at least one coaching report to create a recommendation.",
             "status": "no_report",
-            "report_id": None,
-            "before_window_matches": 0,
-            "after_window_matches": 0,
-            "details": [],
-            "note": "Generate at least one coaching report to evaluate effectiveness.",
         }
 
-    before = [m for m in all_matches if m.played_at and report.generated_at and m.played_at < report.generated_at]
-    after = [m for m in all_matches if m.played_at and report.generated_at and m.played_at >= report.generated_at]
-
-    before = before[-window:]
-    after = after[:window]
-
-    if len(before) < 3 or len(after) < 3:
-        return {
-            "evaluated": False,
-            "status": "insufficient_data",
-            "report_id": report.id,
-            "before_window_matches": len(before),
-            "after_window_matches": len(after),
-            "details": [],
-            "note": "Need at least 3 matches before and after the latest coaching report.",
-        }
-
-    before_stats = _aggregate(before)
-    after_stats = _aggregate(after)
-    details = _metric_changes(after_stats, before_stats)
-
-    positive = sum(1 for d in details if d["delta"] is not None and d["delta"] > 0)
-    negative = sum(1 for d in details if d["delta"] is not None and d["delta"] < 0)
-
-    status = "mixed"
-    if positive > negative:
-        status = "improving"
-    elif negative > positive:
-        status = "declining"
-
-    return {
-        "evaluated": True,
-        "status": status,
-        "report_id": report.id,
-        "before_window_matches": len(before),
-        "after_window_matches": len(after),
-        "details": details,
-        "note": "Compares matches immediately before vs after the latest coaching report.",
-    }
+    result = evaluate_recommendation_effectiveness(
+        db=db, recommendation_id=recommendation.id, sample_window=window
+    )
+    return {"status": result["outcome"], **result}
 
 
 def _summary_text(metric_changes: list[dict], issue_trends: list[dict], recommendation: dict) -> str:
@@ -212,7 +186,10 @@ def _summary_text(metric_changes: list[dict], issue_trends: list[dict], recommen
 
 
 def generate_progress_snapshot(
-    db: Session, recent_window: int = 10, previous_window: int = 10
+    db: Session,
+    recent_window: int = 10,
+    previous_window: int = 10,
+    recommendation_id: int | None = None,
 ) -> ProgressSnapshot:
     all_matches = db.scalars(select(Match)).all()
     all_matches.sort(key=_match_sort_key)
@@ -233,18 +210,19 @@ def generate_progress_snapshot(
         recent_match_ids=[m.id for m in recent],
         previous_match_ids=[m.id for m in previous],
     )
-    recommendation = _recommendation_effectiveness(db=db, all_matches=all_matches, window=recent_window)
+    recommendation = _recommendation_effectiveness(
+        db=db, recommendation_id=recommendation_id, window=recent_window
+    )
     summary = _summary_text(metric_changes, issue_trends, recommendation)
 
     snapshot = ProgressSnapshot(
         metric_window=f"recent:{len(recent)}|previous:{len(previous)}",
         summary=summary,
-        issue_trends_json=json.dumps(issue_trends),
-        performance_change_json=json.dumps(metric_changes),
-        recommendation_effectiveness_json=json.dumps(recommendation),
+        issue_trends_json=issue_trends,
+        performance_change_json=metric_changes,
+        recommendation_effectiveness_json=recommendation,
     )
     db.add(snapshot)
     db.commit()
     db.refresh(snapshot)
     return snapshot
-

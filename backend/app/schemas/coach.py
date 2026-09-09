@@ -3,6 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.schemas.recommendation import RecommendationRead
+
 
 class CoachingReportRead(BaseModel):
     id: int
@@ -16,6 +18,7 @@ class CoachingReportRead(BaseModel):
     next_session_focus: str | None = None
     weekly_plan: str | None = None
     supporting_data: dict[str, Any] | None = None
+    recommendations: list[RecommendationRead] = Field(default_factory=list)
 
 
 class CoachingGenerateRequest(BaseModel):
