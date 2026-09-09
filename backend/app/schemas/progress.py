@@ -3,7 +3,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 class MetricChange(BaseModel):
     metric: str
     recent: float | None = None
@@ -21,13 +20,21 @@ class IssueTrend(BaseModel):
 
 
 class RecommendationEffectiveness(BaseModel):
-    evaluated: bool = False
-    status: str = "insufficient_data"
-    report_id: int | None = None
-    before_window_matches: int = 0
-    after_window_matches: int = 0
-    details: list[MetricChange] = Field(default_factory=list)
-    note: str | None = None
+    recommendation_id: int | None = None
+    recommendation: str = ""
+    evaluation_metric: str = "none"
+    before_sample_size: int = 0
+    after_sample_size: int = 0
+    before_value: float | None = None
+    after_value: float | None = None
+    delta: float | None = None
+    evidence_level: str = "insufficient_data"
+    outcome: str = "insufficient_data"
+    explanation: str | None = None
+    before_occurrences: int | None = None
+    after_occurrences: int | None = None
+    details: Any = Field(default_factory=dict)
+    status: str | None = None
 
 
 class ProgressSnapshotRead(BaseModel):
@@ -43,6 +50,7 @@ class ProgressSnapshotRead(BaseModel):
 class ProgressGenerateRequest(BaseModel):
     recent_window: int = Field(default=10, ge=3, le=50)
     previous_window: int = Field(default=10, ge=3, le=50)
+    recommendation_id: int | None = Field(default=None, ge=1)
 
 
 class ProgressSnapshotListResponse(BaseModel):

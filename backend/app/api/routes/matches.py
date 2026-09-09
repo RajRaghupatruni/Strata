@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import require_writable_demo
 from app.core.config import settings
 from app.core.database import get_db
 from app.models import Match, ReviewNote
@@ -25,7 +26,9 @@ router = APIRouter()
 
 def _to_match_read(record: Match, review_note_count: int | None = None) -> MatchRead:
     metadata = None
-    if record.metadata_json:
+    if isinstance(record.metadata_json, dict):
+        metadata = record.metadata_json
+    elif record.metadata_json:
         try:
             metadata = json.loads(record.metadata_json)
         except json.JSONDecodeError:
@@ -55,7 +58,11 @@ def _to_match_read(record: Match, review_note_count: int | None = None) -> Match
     )
 
 
-@router.post("/import", response_model=MatchImportResponse)
+@router.post(
+    "/import",
+    response_model=MatchImportResponse,
+    dependencies=[Depends(require_writable_demo)],
+)
 def import_matches(payload: MatchImportRequest, db: Session = Depends(get_db)) -> MatchImportResponse:
     inserted, skipped_duplicates = insert_match_items(db, payload.matches)
     return MatchImportResponse(
@@ -65,7 +72,11 @@ def import_matches(payload: MatchImportRequest, db: Session = Depends(get_db)) -
     )
 
 
-@router.post("/import/riot", response_model=RiotImportResponse)
+@router.post(
+    "/import/riot",
+    response_model=RiotImportResponse,
+    dependencies=[Depends(require_writable_demo)],
+)
 def import_matches_from_riot(
     payload: RiotImportRequest, db: Session = Depends(get_db)
 ) -> RiotImportResponse:

@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import require_writable_demo
 from app.core.database import get_db
-from app.models import CoachingReport
+from app.models import CoachingReport, Recommendation
 from app.schemas.coach import (
     CoachingGenerateRequest,
     CoachingReportListResponse,
@@ -16,18 +17,29 @@ from app.schemas.coach import (
 )
 from app.services.coaching.engine import generate_coaching_report
 from app.services.coaching.pro_coach import generate_pro_coaching_brief
+from app.services.recommendations import recommendation_to_read
 
 
 router = APIRouter()
 
 
-def _to_read(report: CoachingReport) -> CoachingReportRead:
+def _to_read(report: CoachingReport, db: Session | None = None) -> CoachingReportRead:
     supporting_data = None
-    if report.supporting_data_json:
+    if isinstance(report.supporting_data_json, dict):
+        supporting_data = report.supporting_data_json
+    elif report.supporting_data_json:
         try:
             supporting_data = json.loads(report.supporting_data_json)
         except json.JSONDecodeError:
             supporting_data = None
+    recommendations = []
+    if db is not None:
+        rows = db.scalars(
+            select(Recommendation)
+            .where(Recommendation.coaching_report_id == report.id)
+            .order_by(Recommendation.id.asc())
+        ).all()
+        recommendations = [recommendation_to_read(row) for row in rows]
 
     return CoachingReportRead(
         id=report.id,
@@ -41,6 +53,7 @@ def _to_read(report: CoachingReport) -> CoachingReportRead:
         next_session_focus=report.next_session_focus,
         weekly_plan=report.weekly_plan,
         supporting_data=supporting_data,
+        recommendations=recommendations,
     )
 
 
@@ -51,11 +64,14 @@ def latest_coaching_report(db: Session = Depends(get_db)) -> LatestCoachingRespo
         .order_by(CoachingReport.generated_at.desc(), CoachingReport.id.desc())
         .limit(1)
     )
-    return LatestCoachingResponse(report=_to_read(report) if report else None)
+    return LatestCoachingResponse(report=_to_read(report, db) if report else None)
 
 
 @router.post(
-    "/generate", response_model=CoachingReportRead, status_code=status.HTTP_201_CREATED
+    "/generate",
+    response_model=CoachingReportRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writable_demo)],
 )
 def generate_report(
     payload: CoachingGenerateRequest, db: Session = Depends(get_db)
@@ -64,7 +80,7 @@ def generate_report(
         report = generate_coaching_report(db=db, recent_window=payload.recent_window)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return _to_read(report)
+    return _to_read(report, db)
 
 
 @router.get("/reports", response_model=CoachingReportListResponse)
@@ -80,7 +96,7 @@ def list_reports(
         .offset(offset)
         .limit(limit)
     ).all()
-    return CoachingReportListResponse(total=total, reports=[_to_read(report) for report in reports])
+    return CoachingReportListResponse(total=total, reports=[_to_read(report, db) for report in reports])
 
 
 @router.post("/pro-brief", response_model=ProCoachingResponse)

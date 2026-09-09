@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import require_writable_demo
 from app.core.database import get_db
 from app.models import ProgressSnapshot
 from app.schemas.progress import (
@@ -19,6 +20,8 @@ router = APIRouter()
 
 
 def _safe_load(value: str | None) -> list | dict:
+    if isinstance(value, (list, dict)):
+        return value
     if not value:
         return []
     try:
@@ -50,7 +53,12 @@ def _to_read(snapshot: ProgressSnapshot) -> ProgressSnapshotRead:
     )
 
 
-@router.post("/generate", response_model=ProgressSnapshotRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/generate",
+    response_model=ProgressSnapshotRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writable_demo)],
+)
 def generate_snapshot(
     payload: ProgressGenerateRequest, db: Session = Depends(get_db)
 ) -> ProgressSnapshotRead:
@@ -59,6 +67,7 @@ def generate_snapshot(
             db=db,
             recent_window=payload.recent_window,
             previous_window=payload.previous_window,
+            recommendation_id=payload.recommendation_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

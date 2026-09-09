@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import require_writable_demo
+from app.core.config import settings
 from app.core.database import get_db
 from app.models import UserProfile
 from app.schemas.settings import UserProfileRead, UserProfileUpdate
@@ -74,6 +76,21 @@ def _get_or_create_profile(db: Session) -> UserProfile:
     return profile
 
 
+def _default_profile_read() -> UserProfileRead:
+    return UserProfileRead(
+        id=0,
+        display_name="Player",
+        target_rank=None,
+        preferred_agents=[],
+        preferred_roles=[],
+        known_weak_areas=[],
+        improvement_priorities=[],
+        personal_notes=None,
+        created_at=None,
+        updated_at=None,
+    )
+
+
 def _to_read(profile: UserProfile) -> UserProfileRead:
     notes = _safe_parse_notes(profile.notes)
     return UserProfileRead(
@@ -102,11 +119,19 @@ def _to_read(profile: UserProfile) -> UserProfileRead:
 
 @router.get("/profile", response_model=UserProfileRead)
 def get_profile(db: Session = Depends(get_db)) -> UserProfileRead:
+    if settings.public_demo_mode:
+        profile = db.scalar(select(UserProfile).order_by(UserProfile.id.asc()).limit(1))
+        return _to_read(profile) if profile is not None else _default_profile_read()
+
     profile = _get_or_create_profile(db)
     return _to_read(profile)
 
 
-@router.put("/profile", response_model=UserProfileRead)
+@router.put(
+    "/profile",
+    response_model=UserProfileRead,
+    dependencies=[Depends(require_writable_demo)],
+)
 def update_profile(payload: UserProfileUpdate, db: Session = Depends(get_db)) -> UserProfileRead:
     profile = _get_or_create_profile(db)
 

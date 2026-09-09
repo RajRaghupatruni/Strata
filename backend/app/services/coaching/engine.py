@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from typing import Any
 
@@ -8,7 +7,7 @@ from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models import CoachingReport, IssueTag, Match, ReviewNote, UserProfile
+from app.models import CoachingReport, IssueTag, Match, Recommendation, ReviewNote, UserProfile
 from app.services.analysis.insights import compute_insights
 from app.services.coaching.ai_refiner import (
     generate_ai_first_coaching_report,
@@ -289,7 +288,7 @@ def _serialize_supporting_data(
     assessment: dict | None,
     ai_metadata: dict | None,
     generation_mode: str,
-) -> str:
+) -> dict[str, Any]:
     payload = {
         "generator": "strata_coaching_v3",
         "generation_mode": generation_mode,
@@ -305,10 +304,75 @@ def _serialize_supporting_data(
         "assessment": assessment,
         "ai_metadata": ai_metadata or {"used_ai": False},
     }
-    return json.dumps(payload)
+    return payload
 
 
-def generate_coaching_report(db: Session, recent_window: int = 10) -> CoachingReport:
+def _recommendation_candidates(
+    *,
+    priority_code: str,
+    priority_issue_text: str,
+    improve_next: str,
+    stop_doing: str,
+    recurring: list[dict],
+    weakest_map: dict | None,
+    insights: dict,
+) -> list[dict[str, Any]]:
+    if recurring and recurring[0].get("occurrences", 0) >= 2:
+        issue = recurring[0]
+        category = str(issue["category"]).strip().lower()
+        return [
+            {
+                "code": f"reduce_{category}",
+                "category": "issue_recurrence",
+                "title": f"Reduce recurring {category.replace('_', ' ')} mistakes",
+                "action": improve_next,
+                "evidence_summary": (
+                    f"{priority_issue_text} High-severity occurrences: "
+                    f"{issue.get('high_severity_occurrences', 0)}."
+                ),
+                "target_issue_category": category,
+                "target_metric": None,
+            }
+        ]
+
+    if weakest_map and weakest_map.get("avg_acs") is not None:
+        label = weakest_map["label"]
+        return [
+            {
+                "code": f"raise_acs_{str(label).lower().replace(' ', '_')}",
+                "category": "performance_metric",
+                "title": f"Stabilize impact on {label}",
+                "action": improve_next,
+                "evidence_summary": (
+                    f"{label} is the weakest map sample: {weakest_map.get('matches')} "
+                    f"matches, {weakest_map.get('win_rate')}% win rate, "
+                    f"{weakest_map.get('avg_acs')} avg ACS."
+                ),
+                "target_issue_category": None,
+                "target_metric": "avg_acs",
+            }
+        ]
+
+    recent = insights.get("recent_form", {})
+    return [
+        {
+            "code": f"general_{priority_code}",
+            "category": "performance_metric",
+            "title": "Improve ranked session consistency",
+            "action": stop_doing,
+            "evidence_summary": (
+                f"Recent form: {recent.get('matches', 0)} matches, "
+                f"{recent.get('win_rate')}% win rate, {recent.get('avg_adr')} avg ADR."
+            ),
+            "target_issue_category": None,
+            "target_metric": "win_rate",
+        }
+    ]
+
+
+def generate_coaching_report(
+    db: Session, recent_window: int = 10, generated_at: datetime | None = None
+) -> CoachingReport:
     all_matches = db.scalars(select(Match)).all()
     all_matches.sort(key=_match_sort_key)
     if not all_matches:
@@ -410,7 +474,33 @@ def generate_coaching_report(db: Session, recent_window: int = 10) -> CoachingRe
     if time_window_start is None:
         time_window_start = time_window_end
 
+    generated_at = generated_at or datetime.now(tz=timezone.utc)
+
+    candidates = _recommendation_candidates(
+        priority_code=priority_code,
+        priority_issue_text=priority_issue_text,
+        improve_next=improve_next,
+        stop_doing=stop_doing,
+        recurring=recurring,
+        weakest_map=weakest_map,
+        insights=insights,
+    )
+
+    supporting_data = _serialize_supporting_data(
+        insights=insights,
+        recurring=recurring,
+        priority_code=priority_code,
+        strongest_agent=strongest_agent,
+        strongest_map=strongest_map,
+        weakest_map=weakest_map,
+        assessment=assessment,
+        ai_metadata=ai_metadata,
+        generation_mode=generation_mode,
+    )
+    supporting_data["recommendation_candidates"] = candidates
+
     report = CoachingReport(
+        generated_at=generated_at,
         time_window_start=time_window_start,
         time_window_end=time_window_end,
         priority_issue=priority_issue_text,
@@ -419,19 +509,25 @@ def generate_coaching_report(db: Session, recent_window: int = 10) -> CoachingRe
         improve_next=improve_next,
         next_session_focus=next_session_focus,
         weekly_plan=weekly_plan,
-        supporting_data_json=_serialize_supporting_data(
-            insights=insights,
-            recurring=recurring,
-            priority_code=priority_code,
-            strongest_agent=strongest_agent,
-            strongest_map=strongest_map,
-            weakest_map=weakest_map,
-            assessment=assessment,
-            ai_metadata=ai_metadata,
-            generation_mode=generation_mode,
-        ),
+        supporting_data_json=supporting_data,
     )
     db.add(report)
+    db.flush()
+    for candidate in candidates:
+        db.add(
+            Recommendation(
+                coaching_report_id=report.id,
+                code=candidate["code"],
+                category=candidate["category"],
+                title=candidate["title"],
+                action=candidate["action"],
+                evidence_summary=candidate["evidence_summary"],
+                target_issue_category=candidate.get("target_issue_category"),
+                target_metric=candidate.get("target_metric"),
+                status="active",
+                active_at=generated_at,
+            )
+        )
     db.commit()
     db.refresh(report)
     return report

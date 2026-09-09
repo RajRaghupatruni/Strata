@@ -1,8 +1,7 @@
 """Shared persistence for normalized manual, synthetic, and Riot imports."""
 
-import json
-
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Match
@@ -42,13 +41,19 @@ def insert_match_items(db: Session, items: list[MatchImportItem]) -> tuple[int, 
             rr_change=item.rr_change,
             rank_at_time=item.rank_at_time,
             session_id=item.session_id,
-            metadata_json=json.dumps(item.metadata) if item.metadata is not None else None,
+            metadata_json=item.metadata,
         )
-        db.add(record)
-        db.flush()
-        inserted += 1
+        try:
+            with db.begin_nested():
+                db.add(record)
+                db.flush()
+        except IntegrityError:
+            if not item.external_match_id:
+                raise
+            skipped_duplicates += 1
+        else:
+            inserted += 1
 
     db.commit()
     return inserted, skipped_duplicates
-
 
