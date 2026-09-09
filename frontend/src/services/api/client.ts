@@ -1,3 +1,5 @@
+import { apiError } from "./demoMode";
+import type { Recommendation, RecommendationListResponse, RecommendationStatus, RecommendationUpdate } from "../../types/recommendation";
 import type { MatchFilters, MatchListResponse } from "../../types/match";
 import type { InsightsResponse } from "../../types/insights";
 import type {
@@ -62,7 +64,7 @@ export async function fetchMatches(filters: MatchFilters = {}): Promise<MatchLis
   const url = withQuery(`${API_BASE_URL}/matches`, filters);
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to load matches (${response.status})`);
+    throw await apiError(response, `Failed to load matches (${response.status})`);
   }
   return (await response.json()) as MatchListResponse;
 }
@@ -70,7 +72,7 @@ export async function fetchMatches(filters: MatchFilters = {}): Promise<MatchLis
 export async function fetchInsights(recentWindow = 10): Promise<InsightsResponse> {
   const response = await fetch(`${API_BASE_URL}/insights?recent_window=${recentWindow}`);
   if (!response.ok) {
-    throw new Error(`Failed to load insights (${response.status})`);
+    throw await apiError(response, `Failed to load insights (${response.status})`);
   }
   return (await response.json()) as InsightsResponse;
 }
@@ -84,7 +86,7 @@ export async function fetchReviewNotes(matchId?: number): Promise<ReviewNotesRes
     `${API_BASE_URL}/review/notes${params.toString() ? `?${params.toString()}` : ""}`
   );
   if (!response.ok) {
-    throw new Error(`Failed to load review notes (${response.status})`);
+    throw await apiError(response, `Failed to load review notes (${response.status})`);
   }
   return (await response.json()) as ReviewNotesResponse;
 }
@@ -98,7 +100,7 @@ export async function createReviewNote(input: ReviewNoteInput): Promise<ReviewNo
     body: JSON.stringify(input)
   });
   if (!response.ok) {
-    throw new Error(`Failed to create review note (${response.status})`);
+    throw await apiError(response, `Failed to create review note (${response.status})`);
   }
   return (await response.json()) as ReviewNote;
 }
@@ -112,7 +114,7 @@ export async function updateReviewNote(noteId: number, input: Partial<ReviewNote
     body: JSON.stringify(input)
   });
   if (!response.ok) {
-    throw new Error(`Failed to update review note (${response.status})`);
+    throw await apiError(response, `Failed to update review note (${response.status})`);
   }
   return (await response.json()) as ReviewNote;
 }
@@ -122,7 +124,7 @@ export async function deleteReviewNote(noteId: number): Promise<void> {
     method: "DELETE"
   });
   if (!response.ok) {
-    throw new Error(`Failed to delete review note (${response.status})`);
+    throw await apiError(response, `Failed to delete review note (${response.status})`);
   }
 }
 
@@ -135,7 +137,7 @@ export async function fetchRecurringIssues(matchId?: number): Promise<RecurringI
     `${API_BASE_URL}/review/issues/recurring${params.toString() ? `?${params.toString()}` : ""}`
   );
   if (!response.ok) {
-    throw new Error(`Failed to load recurring issues (${response.status})`);
+    throw await apiError(response, `Failed to load recurring issues (${response.status})`);
   }
   return (await response.json()) as RecurringIssuesResponse;
 }
@@ -143,7 +145,7 @@ export async function fetchRecurringIssues(matchId?: number): Promise<RecurringI
 export async function fetchLatestCoachingReport(): Promise<LatestCoachingResponse> {
   const response = await fetch(`${API_BASE_URL}/coach/latest`);
   if (!response.ok) {
-    throw new Error(`Failed to load latest coaching report (${response.status})`);
+    throw await apiError(response, `Failed to load latest coaching report (${response.status})`);
   }
   return (await response.json()) as LatestCoachingResponse;
 }
@@ -157,7 +159,7 @@ export async function generateCoachingReport(recentWindow = 10): Promise<Coachin
     body: JSON.stringify({ recent_window: recentWindow })
   });
   if (!response.ok) {
-    throw new Error(`Failed to generate coaching report (${response.status})`);
+    throw await apiError(response, `Failed to generate coaching report (${response.status})`);
   }
   return (await response.json()) as CoachingReport;
 }
@@ -165,7 +167,7 @@ export async function generateCoachingReport(recentWindow = 10): Promise<Coachin
 export async function fetchCoachingReports(limit = 10): Promise<CoachingReportsResponse> {
   const response = await fetch(`${API_BASE_URL}/coach/reports?limit=${limit}`);
   if (!response.ok) {
-    throw new Error(`Failed to load coaching reports (${response.status})`);
+    throw await apiError(response, `Failed to load coaching reports (${response.status})`);
   }
   return (await response.json()) as CoachingReportsResponse;
 }
@@ -187,14 +189,7 @@ export async function generateProCoachingBrief(
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
-    let detail = `Failed to generate pro coaching brief (${response.status})`;
-    try {
-      const body = (await response.json()) as { detail?: string };
-      if (body.detail) detail = body.detail;
-    } catch {
-      // keep default detail
-    }
-    throw new Error(detail);
+    throw await apiError(response, `Failed to generate pro coaching brief (${response.status})`);
   }
   return (await response.json()) as ProCoachingBrief;
 }
@@ -202,24 +197,25 @@ export async function generateProCoachingBrief(
 export async function fetchLatestProgressSnapshot(): Promise<LatestProgressResponse> {
   const response = await fetch(`${API_BASE_URL}/progress/latest`);
   if (!response.ok) {
-    throw new Error(`Failed to load latest progress snapshot (${response.status})`);
+    throw await apiError(response, `Failed to load latest progress snapshot (${response.status})`);
   }
   return (await response.json()) as LatestProgressResponse;
 }
 
 export async function generateProgressSnapshot(
   recentWindow = 10,
-  previousWindow = 10
+  previousWindow = 10,
+  recommendationId?: number
 ): Promise<ProgressSnapshot> {
   const response = await fetch(`${API_BASE_URL}/progress/generate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ recent_window: recentWindow, previous_window: previousWindow })
+    body: JSON.stringify({ recent_window: recentWindow, previous_window: previousWindow, recommendation_id: recommendationId })
   });
   if (!response.ok) {
-    throw new Error(`Failed to generate progress snapshot (${response.status})`);
+    throw await apiError(response, `Failed to generate progress snapshot (${response.status})`);
   }
   return (await response.json()) as ProgressSnapshot;
 }
@@ -227,7 +223,7 @@ export async function generateProgressSnapshot(
 export async function fetchProgressSnapshots(limit = 10): Promise<ProgressSnapshotsResponse> {
   const response = await fetch(`${API_BASE_URL}/progress?limit=${limit}`);
   if (!response.ok) {
-    throw new Error(`Failed to load progress snapshots (${response.status})`);
+    throw await apiError(response, `Failed to load progress snapshots (${response.status})`);
   }
   return (await response.json()) as ProgressSnapshotsResponse;
 }
@@ -235,7 +231,7 @@ export async function fetchProgressSnapshots(limit = 10): Promise<ProgressSnapsh
 export async function fetchUserProfile(): Promise<UserProfile> {
   const response = await fetch(`${API_BASE_URL}/settings/profile`);
   if (!response.ok) {
-    throw new Error(`Failed to load user profile (${response.status})`);
+    throw await apiError(response, `Failed to load user profile (${response.status})`);
   }
   return (await response.json()) as UserProfile;
 }
@@ -249,7 +245,7 @@ export async function updateUserProfile(input: UserProfileInput): Promise<UserPr
     body: JSON.stringify(input)
   });
   if (!response.ok) {
-    throw new Error(`Failed to update user profile (${response.status})`);
+    throw await apiError(response, `Failed to update user profile (${response.status})`);
   }
   return (await response.json()) as UserProfile;
 }
@@ -257,7 +253,7 @@ export async function updateUserProfile(input: UserProfileInput): Promise<UserPr
 export async function fetchHomeSummary(recentWindow = 10): Promise<HomeSummary> {
   const response = await fetch(`${API_BASE_URL}/home/summary?recent_window=${recentWindow}`);
   if (!response.ok) {
-    throw new Error(`Failed to load home summary (${response.status})`);
+    throw await apiError(response, `Failed to load home summary (${response.status})`);
   }
   return (await response.json()) as HomeSummary;
 }
@@ -273,14 +269,35 @@ export async function importMatchesFromRiot(
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
-    let detail = `Riot import failed (${response.status})`;
-    try {
-      const body = (await response.json()) as { detail?: string };
-      if (body.detail) detail = body.detail;
-    } catch {
-      // keep default message
-    }
-    throw new Error(detail);
+    throw await apiError(response, `Riot import failed (${response.status})`);
   }
   return (await response.json()) as RiotImportResult;
+}
+
+export async function fetchRecommendations(
+  filters: { status?: RecommendationStatus; limit?: number; offset?: number } = {}
+): Promise<RecommendationListResponse> {
+  const params = new URLSearchParams();
+  if (filters.status) params.set("status", filters.status);
+  if (filters.limit !== undefined) params.set("limit", String(filters.limit));
+  if (filters.offset !== undefined) params.set("offset", String(filters.offset));
+  const response = await fetch(`${API_BASE_URL}/recommendations?${params}`);
+  if (!response.ok) throw await apiError(response, `Failed to load recommendations (${response.status})`);
+  return await response.json() as RecommendationListResponse;
+}
+
+export async function fetchRecommendation(id: number): Promise<Recommendation> {
+  const response = await fetch(`${API_BASE_URL}/recommendations/${id}`);
+  if (!response.ok) throw await apiError(response, `Failed to load recommendation (${response.status})`);
+  return await response.json() as Recommendation;
+}
+
+export async function updateRecommendation(id: number, input: RecommendationUpdate): Promise<Recommendation> {
+  const response = await fetch(`${API_BASE_URL}/recommendations/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input)
+  });
+  if (!response.ok) throw await apiError(response, `Failed to update recommendation (${response.status})`);
+  return await response.json() as Recommendation;
 }

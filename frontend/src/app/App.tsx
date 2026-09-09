@@ -15,6 +15,7 @@ import { MatchesPage } from "../features/matches/MatchesPage";
 import { ProgressPage } from "../features/progress/ProgressPage";
 import { ReviewPage } from "../features/review/ReviewPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
+import { PUBLIC_DEMO_MESSAGE, usePublicDemoReadOnly } from "../services/api/demoMode";
 
 const links = [
   { to: "/", label: "Home", hotkey: "1", summary: "What matters now" },
@@ -64,6 +65,7 @@ function Navigation() {
 }
 
 function AppShell() {
+  const readOnly = usePublicDemoReadOnly();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -144,6 +146,12 @@ function AppShell() {
           )}
 
           <main className="page">
+            {readOnly && (
+              <div className="surface-subtle p-4 mb-5" role="status">
+                <p className="label">Public demo · Read-only</p>
+                <p className="section-copy">{PUBLIC_DEMO_MESSAGE}</p>
+              </div>
+            )}
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/matches" element={<MatchesPage />} />

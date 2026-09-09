@@ -1,3 +1,4 @@
+import { usePublicDemoReadOnly } from "../../services/api/demoMode";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "../../components/PageHeader";
@@ -148,6 +149,7 @@ function IssueSummary({ issues }: { issues: RecurringIssue[] }) {
 }
 
 export function ReviewPage() {
+  const readOnly = usePublicDemoReadOnly();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -452,7 +454,7 @@ export function ReviewPage() {
             </div>
 
             <div className="mt-5 flex flex-wrap items-center gap-3">
-              <button className="button button-primary" disabled={saving} type="submit">
+              <button className="button button-primary" disabled={saving || readOnly} type="submit">
                 {saving ? "Saving" : editingNoteId ? "Update note" : "Save note"}
               </button>
               <p className="microcopy">Good reviews are short, specific, and reusable by the coaching layer.</p>
@@ -493,8 +495,8 @@ export function ReviewPage() {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <button className="button button-secondary min-h-0 px-3 py-1" onClick={() => startEdit(note)} type="button">Edit</button>
-                        <button className="button button-danger min-h-0 px-3 py-1" onClick={() => void handleDelete(note.id)} type="button">Delete</button>
+                        <button className="button button-secondary min-h-0 px-3 py-1" disabled={readOnly} onClick={() => startEdit(note)} type="button">Edit</button>
+                        <button className="button button-danger min-h-0 px-3 py-1" disabled={readOnly} onClick={() => void handleDelete(note.id)} type="button">Delete</button>
                       </div>
                     </div>
                     {note.full_note && <p className="mt-3 text-sm leading-6 text-[var(--text-soft)]">{note.full_note}</p>}

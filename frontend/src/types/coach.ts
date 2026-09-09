@@ -1,3 +1,5 @@
+import type { Recommendation } from "./recommendation";
+
 export type CoachingReport = {
   id: number;
   generated_at?: string | null;
@@ -10,6 +12,7 @@ export type CoachingReport = {
   next_session_focus?: string | null;
   weekly_plan?: string | null;
   supporting_data?: Record<string, unknown> | null;
+  recommendations: Recommendation[];
 };
 
 export type LatestCoachingResponse = {

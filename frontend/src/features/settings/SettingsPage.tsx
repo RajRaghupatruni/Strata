@@ -1,3 +1,4 @@
+import { usePublicDemoReadOnly } from "../../services/api/demoMode";
 import { FormEvent, useEffect, useState } from "react";
 
 import { PageHeader } from "../../components/PageHeader";
@@ -37,6 +38,7 @@ function listToCsv(values: string[]): string {
 }
 
 export function SettingsPage() {
+  const readOnly = usePublicDemoReadOnly();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -203,7 +205,7 @@ export function SettingsPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button className="button button-primary" disabled={saving} type="submit">
+            <button className="button button-primary" disabled={saving || readOnly} type="submit">
               {saving ? "Saving settings" : "Save settings"}
             </button>
             <p className="microcopy">Comma-separated values are converted into structured profile lists.</p>

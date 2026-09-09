@@ -1,3 +1,4 @@
+import { statusLabel } from "../../components/RecommendationCard";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -256,13 +257,14 @@ export function HomePage() {
 
           <div className="surface panel-padding">
             <p className="eyebrow">Progress status</p>
-            <h2 className="section-title mt-3">{progressStatus}</h2>
+            <h2 className="section-title mt-3">{statusLabel(progressStatus)}</h2>
             <p className="section-copy">
               {data.progress_highlight?.summary || "Generate a progress snapshot once you have before and after evidence."}
             </p>
             <p className="microcopy mt-4">
               Snapshot {data.progress_highlight?.snapshot_id ?? "N/A"} | {formatDate(data.progress_highlight?.snapshot_date)}
             </p>
+            <div className="mt-5"><QuickLink to="/progress">Explore recommendation evidence</QuickLink></div>
           </div>
         </div>
       </div>

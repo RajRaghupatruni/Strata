@@ -1,3 +1,4 @@
+import { usePublicDemoReadOnly } from "../../services/api/demoMode";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "../../components/PageHeader";
@@ -172,6 +173,7 @@ function MatchInspector({ match }: { match?: Match }) {
 }
 
 export function MatchesPage() {
+  const readOnly = usePublicDemoReadOnly();
   const [matches, setMatches] = useState<Match[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -315,7 +317,7 @@ export function MatchesPage() {
               onChange={(event) => setRiotMaxMatches(Math.max(1, Math.min(50, Number(event.target.value) || 1)))}
             />
           </label>
-          <button className="button button-primary" type="submit" disabled={riotLoading}>
+          <button className="button button-primary" type="submit" disabled={riotLoading || readOnly}>
             {riotLoading ? "Importing" : "Import Riot"}
           </button>
         </div>

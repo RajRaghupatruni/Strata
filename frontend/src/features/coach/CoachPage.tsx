@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "../../components/PageHeader";
+import { RecommendationCard } from "../../components/RecommendationCard";
+import { PublicDemoReadOnlyError, usePublicDemoReadOnly } from "../../services/api/demoMode";
+import type { UserRecommendationStatus } from "../../types/recommendation";
 import { StatePanel } from "../../components/StatePanel";
 import {
   fetchCoachingReports,
   fetchLatestCoachingReport,
   generateCoachingReport,
-  generateProCoachingBrief
+  generateProCoachingBrief,
+  updateRecommendation
 } from "../../services/api/client";
 import type { CoachingReport, ProCoachingBrief } from "../../types/coach";
 
@@ -70,6 +74,8 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
 }
 
 export function CoachPage() {
+  const readOnly = usePublicDemoReadOnly();
+  const [savingRecommendation, setSavingRecommendation] = useState<number | null>(null);
   const [recentWindow, setRecentWindow] = useState(10);
   const [latest, setLatest] = useState<CoachingReport | null>(null);
   const [history, setHistory] = useState<CoachingReport[]>([]);
@@ -102,6 +108,23 @@ export function CoachPage() {
     void load();
   }, []);
 
+  async function onStatusChange(id: number, status: UserRecommendationStatus) {
+    setSavingRecommendation(id);
+    setError(null);
+    try {
+      const updated = await updateRecommendation(id, { status });
+      const updateReport = (report: CoachingReport) => ({
+        ...report, recommendations: report.recommendations.map((item) => item.id === id ? updated : item)
+      });
+      setLatest((report) => report ? updateReport(report) : null);
+      setHistory((reports) => reports.map(updateReport));
+    } catch (err) {
+      if (!(err instanceof PublicDemoReadOnlyError)) setError(err instanceof Error ? err.message : "Unable to update lifecycle status");
+    } finally {
+      setSavingRecommendation(null);
+    }
+  }
+
   async function onGenerate() {
     setGenerating(true);
     setError(null);
@@ -109,7 +132,7 @@ export function CoachPage() {
       await generateCoachingReport(recentWindow);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate coaching");
+      if (!(err instanceof PublicDemoReadOnlyError)) setError(err instanceof Error ? err.message : "Failed to generate coaching");
     } finally {
       setGenerating(false);
     }
@@ -157,6 +180,11 @@ export function CoachPage() {
     return typeof mode === "string" ? mode : "deterministic";
   }, [latest]);
 
+  // Prefer an active action, retaining the backend's report order for ties.
+  const recommendations = [...(latest?.recommendations ?? [])].sort(
+    (a, b) => Number(b.status === "active") - Number(a.status === "active")
+  );
+
   return (
     <section className="page-stack">
       <PageHeader
@@ -180,7 +208,7 @@ export function CoachPage() {
       />
 
       <div className="control-bar">
-        <button className="button button-primary" disabled={generating} onClick={() => void onGenerate()} type="button">
+        <button className="button button-primary" disabled={generating || readOnly} onClick={() => void onGenerate()} type="button">
           {generating ? "Generating report" : "Generate coaching report"}
         </button>
         <span className="chip chip-accent">Window: last {recentWindow} matches</span>
@@ -209,10 +237,26 @@ export function CoachPage() {
 
       {!loading && latest && (
         <>
+          {recommendations[0] && (
+            <RecommendationCard recommendation={recommendations[0]} primary readOnly={readOnly}
+              saving={savingRecommendation !== null} onStatusChange={(id, status) => void onStatusChange(id, status)} />
+          )}
+          {recommendations.length > 1 && (
+            <details className="surface panel-padding">
+              <summary className="cursor-pointer text-base font-semibold">{recommendations.length - 1} supporting recommendations</summary>
+              <div className="mt-4 grid gap-4">
+                {recommendations.slice(1).map((recommendation) => (
+                  <RecommendationCard key={recommendation.id} recommendation={recommendation} readOnly={readOnly}
+                    saving={savingRecommendation !== null} onStatusChange={(id, status) => void onStatusChange(id, status)} />
+                ))}
+              </div>
+            </details>
+          )}
+          {recommendations.length === 0 && <p className="microcopy">This report has no persisted recommendations. Its original guidance is available below.</p>}
           <div className="surface-strong panel-padding">
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
               <div>
-                <p className="eyebrow">Current priority</p>
+                <p className="eyebrow">Report #{latest.id} · Coaching context</p>
                 <h2 className="mt-4 max-w-4xl text-[clamp(2.4rem,5vw,5.3rem)] font-[720] leading-[0.95] tracking-[0] text-[var(--text)]">
                   {latest.priority_issue || "No priority issue generated"}
                 </h2>
@@ -293,7 +337,8 @@ export function CoachPage() {
               <tbody>
                 {history.map((report) => (
                   <tr key={report.id}>
-                    <td>#{report.id}</td>
+                    <td><button className="button button-secondary" type="button" aria-pressed={latest?.id === report.id}
+                      onClick={() => { setLatest(report); setError(null); }}>View report #{report.id}</button></td>
                     <td>{formatDate(report.generated_at)}</td>
                     <td>{report.priority_issue ?? "N/A"}</td>
                   </tr>
@@ -318,7 +363,7 @@ export function CoachPage() {
               Match ID
               <input className="field" placeholder="Optional" value={proMatchId} onChange={(event) => setProMatchId(event.target.value)} />
             </label>
-            <button className="button button-secondary" disabled={proGenerating} onClick={() => void onGenerateProBrief()} type="button">
+            <button className="button button-secondary" disabled={proGenerating || readOnly} onClick={() => void onGenerateProBrief()} type="button">
               {proGenerating ? "Generating" : "Generate brief"}
             </button>
           </div>

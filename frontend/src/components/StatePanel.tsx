@@ -1,3 +1,5 @@
+import { PUBLIC_DEMO_MESSAGE } from "../services/api/demoMode";
+
 type StatePanelProps = {
   title: string;
   description: string;
@@ -19,6 +21,15 @@ const classes: Record<NonNullable<StatePanelProps["variant"]>, string> = {
 };
 
 export function StatePanel({ title, description, variant = "empty" }: StatePanelProps) {
+  if (description === PUBLIC_DEMO_MESSAGE) {
+    return (
+      <div className="state-panel" role="status">
+        <p className="state-kicker">Explore the demo</p>
+        <p className="state-title">This public demo is read-only</p>
+        <p className="state-description">{description}</p>
+      </div>
+    );
+  }
   return (
     <div className={`state-panel ${classes[variant]}`} role={variant === "error" ? "alert" : "status"}>
       {variant === "loading" && (

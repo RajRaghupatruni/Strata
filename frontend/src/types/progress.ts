@@ -3,7 +3,7 @@ export type MetricChange = {
   recent: number | null;
   previous: number | null;
   delta: number | null;
-  direction: "up" | "down" | "flat";
+  direction: string;
 };
 
 export type IssueTrend = {
@@ -11,17 +11,26 @@ export type IssueTrend = {
   recent_count: number;
   previous_count: number;
   delta: number;
-  direction: "up" | "down" | "flat";
+  direction: string;
 };
 
 export type RecommendationEffectiveness = {
-  evaluated: boolean;
-  status: string;
-  report_id: number | null;
-  before_window_matches: number;
-  after_window_matches: number;
-  details: MetricChange[];
-  note?: string | null;
+  recommendation_id: number | null;
+  recommendation: string;
+  evaluation_metric: string;
+  before_sample_size: number;
+  after_sample_size: number;
+  before_value: number | null;
+  after_value: number | null;
+  delta: number | null;
+  // Backend fields are strings, not enums; presentation handles known values.
+  evidence_level: string;
+  outcome: string;
+  explanation: string;
+  before_occurrences: number | null;
+  after_occurrences: number | null;
+  details: unknown;
+  status: string | null;
 };
 
 export type ProgressSnapshot = {
@@ -42,4 +51,3 @@ export type ProgressSnapshotsResponse = {
   total: number;
   snapshots: ProgressSnapshot[];
 };
-
