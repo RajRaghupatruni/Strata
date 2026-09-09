@@ -19,7 +19,7 @@ flowchart LR
     Browser --> Frontend[React + TypeScript frontend]
     Frontend --> API[FastAPI backend]
     API --> Services[Application and domain services]
-    Services --> DB[(PostgreSQL for hosted/production persistence / SQLite for local and test use)]
+    Services --> DB[(PostgreSQL 16 validated architecture / SQLite for public demo, local, and test use)]
 
     subgraph Providers[Provider boundary]
         Synthetic[SyntheticMatchProvider]
@@ -53,7 +53,8 @@ or phrase guidance when configured, but it does not own statistical facts.
 | --- | --- |
 | Frontend | React + TypeScript application with Home, Matches, Insights, Review, Coach, Progress, and Settings surfaces. |
 | Backend | FastAPI routes organized by feature area, backed by SQLAlchemy models and services. |
-| Persistence | SQLAlchemy supports SQLite for local/test workflows and PostgreSQL for hosted/production deployments. Alembic owns schema evolution. Docker PostgreSQL 16 validation passed locally; this is not cloud production load validation. |
+| Public deployment | Render hosts the public portfolio demo at `https://strata-s41v.onrender.com`, backed by `https://strata-apii.onrender.com`. It uses read-only demo mode, deterministic synthetic data, and ephemeral SQLite by design. |
+| Persistence | SQLAlchemy supports SQLite for local/test workflows and the public demo runtime. PostgreSQL 16 is the validated production-style architecture, and Alembic owns schema evolution. Docker PostgreSQL 16 validation passed locally; this is not cloud production load validation. |
 | Database integrity | External match IDs are enforced unique at the database layer, with application-level duplicate handling retained for clear import behavior. |
 | Ingestion | Synthetic provider and retained Riot adapter feed shared payload validation, normalization, and match persistence. |
 | Demo data | `python -m app.seed_demo` imports 40 deterministic fictional matches. Repeat runs skip existing demo match IDs. |
@@ -70,11 +71,9 @@ or phrase guidance when configured, but it does not own statistical facts.
 | Area | Planned direction |
 | --- | --- |
 | Authentication and session isolation | Required before public shared write access is enabled. Current demo assumptions must not be treated as multi-user isolation. |
-| Hosted deployment | Final public deployment, topology, rollback commands, and operational ownership remain pending. |
 | Riot production access | Requires Riot approval of the finished application. The adapter is retained, but live production access is not available to the demo. |
 | Background Riot sync | Redis, Celery, and an asynchronous SyncJob workflow remain deferred. A future workflow should handle retries, 429s, stale jobs, idempotency, and duplicate requests. |
-| Observability | OpenTelemetry instrumentation and Grafana dashboards remain pending, along with hosted request/log operations. |
-| Packaging and delivery | Docker/Compose and CI are not present in this repository and remain pending P1 work. |
+| Observability extensions | Structured logs, request IDs, health/readiness, and Prometheus metrics are implemented. OpenTelemetry instrumentation and Grafana dashboards remain pending. |
 
 Redis, Celery, or equivalent distributed job infrastructure is not implemented in the
 current release baseline and should not be depicted as live infrastructure.
@@ -125,11 +124,12 @@ consume.
 ### Persistence
 
 SQLAlchemy stores normalized matches, review notes, issue tags, coaching reports,
-persisted recommendations, progress snapshots, and profile context. PostgreSQL is the
-supported hosted/production database and Alembic provides explicit schema migrations.
-Local Docker PostgreSQL 16 validation reached migration head `20260908_0001`, confirmed
-the readiness path, and passed the dedicated schema/data smoke checks. SQLite remains
-useful for lightweight local and test workflows. No cloud production load validation is
+persisted recommendations, progress snapshots, and profile context. PostgreSQL 16 is
+the validated production-style database architecture and Alembic provides explicit
+schema migrations. Local Docker PostgreSQL 16 validation reached migration head
+`20260908_0001`, confirmed the readiness path, and passed the dedicated schema/data
+smoke checks. The public Render demo intentionally uses ephemeral SQLite because it is
+read-only, synthetic, and reseeded on startup. No cloud production load validation is
 claimed.
 
 ## Deterministic Analytics and AI
@@ -179,8 +179,9 @@ frontend/
   coaching path intended for real data.
 - Deterministic analytics before AI keeps numbers auditable and lets the app work
   without external model credentials.
-- PostgreSQL and Alembic provide the production persistence path; deployment still
-  requires environment-specific migration and rollback validation.
+- PostgreSQL and Alembic provide the durable production-style persistence path; the
+  public portfolio deployment intentionally chooses ephemeral SQLite to keep costs near
+  zero while preserving the validated Postgres path for future durable deployments.
 - Background synchronization is intentionally deferred. First release behavior should be
   synchronous/provider-driven rather than pretending distributed execution already
   exists.

@@ -1,342 +1,236 @@
 # Strata
 
-A local-first Valorant Performance Intelligence and Coaching Platform.
+[![CI](https://github.com/RajRaghupatruni/Strata/actions/workflows/ci.yml/badge.svg)](https://github.com/RajRaghupatruni/Strata/actions/workflows/ci.yml)
 
-The initial public release runs entirely on supported, deterministic synthetic data.
-Riot production access requires project approval; neither Riot nor OpenAI credentials
-are needed for the demo, startup, analytics, review, coaching, or progress workflows.
+**Valorant performance intelligence and coaching platform that turns match history into evidence-backed recommendations and measures whether those recommendations actually worked.**
 
-Design references:
-- `PRODUCT_VISION.md`
-- `MVP_ROADMAP.md`
-- `ARCHITECTURE.md`
+[Live Demo](https://strata-s41v.onrender.com) · [API Health](https://strata-apii.onrender.com/health) · [API Readiness](https://strata-apii.onrender.com/ready)
 
-## Current Status
+The public portfolio demo is intentionally zero-cost to operate: a React/Vite static site, a FastAPI web service, deterministic synthetic data, read-only demo mode, and an ephemeral SQLite database reseeded on startup. The production-style persistence path remains PostgreSQL 16 with Alembic migrations and is exercised locally and in CI.
 
-Implemented foundation:
-- backend scaffold (`FastAPI`, modular route domains, SQLite wiring, core models)
-- frontend scaffold (`React + TypeScript + Tailwind`, app shell + feature routes)
-- local-first monorepo layout ready for MVP vertical slices
-- Match workflows:
-  - `POST /api/v1/matches/import` (validated JSON import + duplicate skip by `external_match_id`)
-  - `GET /api/v1/matches` (filters: `map`, `agent`, `role`, `result`, `start_date`, `end_date`)
-  - `GET /api/v1/matches/{match_id}`
-  - `Matches` page wired to live backend data
-  - 40 fictional Riot-like payloads, guarded demo seed command, and smoke test script
-- Insights workflows:
-  - deterministic insights service for recent form, map/agent/role breakdowns, streaks, trends, and volatility
-  - `GET /api/v1/insights?recent_window=10`
-  - Insights page wired to live API output
-- Review workflows:
-  - review note CRUD (`add`, `edit`, `delete`)
-  - issue tag flow (embedded tags on notes + standalone add/delete tag endpoints)
-  - recurring issue grouping endpoint
-  - Review page wired to live API (note editor + match filter + recurring issue table)
-  - match detail integration via `review_note_count` on `GET /api/v1/matches/{match_id}`
-- Coaching workflows:
-  - multi-mode coaching engine (`deterministic`, `hybrid`, `ai_first`)
-  - `POST /api/v1/coach/generate`
-  - `GET /api/v1/coach/latest`
-  - `GET /api/v1/coach/reports`
-  - Coach page wired to generate/view latest report + history
-- Progress workflows:
-  - deterministic progress snapshot generator (`before-vs-after metrics`, `issue recurrence deltas`, `recommendation effectiveness`)
-  - `POST /api/v1/progress/generate`
-  - `GET /api/v1/progress/latest`
-  - `GET /api/v1/progress`
-  - Progress page wired to generate/view latest snapshot + history
-- Personal context workflows:
-  - persistent user profile context (`display name`, `target rank`, `preferred agents/roles`, `known weak areas`, `improvement priorities`, `notes`)
-  - `GET /api/v1/settings/profile`
-  - `PUT /api/v1/settings/profile`
-  - Settings page wired to load/edit/save profile context
-- Home command center workflows:
-  - consolidated home summary endpoint (`matches + insights + coaching + progress + review gap`)
-  - `GET /api/v1/home/summary`
-  - Home page wired to:
-    - rank/climb context
-    - recent trend
-    - strongest/weakest map + agent
-    - current focus + next review suggestion
-    - coaching summary
-    - progress highlight
-    - counters + quick links
-- UX refinement workflows:
-  - consistent page header hierarchy across all feature surfaces
-  - standardized loading/error/empty/success state panels
-  - improved shell navigation styling with keyboard shortcuts (`Alt+1..7`)
-  - copywriting clarity pass for session-oriented guidance
-  - motion/focus/scrollbar polish and responsive nav behavior
-- Smart upgrade workflows:
-  - optional Riot ingestion endpoint by Riot ID (`game_name#tag_line`)
-  - advanced deterministic performance assessment vector for coaching
-  - AI-first real-time coaching mode and hybrid refinement mode
-  - optional live Riot import form (requires approved access)
-  - richer coaching UI signal visualization (assessment bars + AI usage marker)
+![Strata Home dashboard showing current priority, KPIs, trend analysis, active recommendation, and recommendation effectiveness](docs/assets/strata-home.png)
 
-Not implemented yet:
-- optional advanced UX extras (command palette, chart animations, accessibility audit)
-- fully automated Riot OAuth/RSO consent flow for public multi-user deployment
+## What Strata Does
 
-## Project Structure
-
-```text
-backend/
-  app/
-    api/routes/
-    core/
-    models/
-    schemas/
-    services/
-    repositories/
-frontend/
-  src/
-    app/
-    features/
-      home/
-      matches/
-      insights/
-      review/
-      coach/
-      progress/
-      settings/
+```mermaid
+flowchart TD
+    A[Match ingestion] --> B[Deterministic analytics]
+    B --> C[Player review evidence]
+    C --> D[Recurring issue detection]
+    D --> E[Coaching recommendation]
+    E --> F[Later-match evidence]
+    F --> G[Recommendation effectiveness]
 ```
 
-## Run Locally
+Strata does not stop at generating advice. Recommendations are persisted, later evidence is evaluated against them, and the backend owns the resulting effectiveness outcome.
 
-### Backend
+## Product Screenshots
 
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-# Configuration defaults are sufficient; no .env file or API keys needed.
-python -m app.seed_demo
-uvicorn app.main:app --reload --port 8000
+### Match History
+
+![Strata Matches page showing seeded match history, filters, and match detail context](docs/assets/strata-matches.png)
+
+Seeded synthetic match history with map, agent, combat, result, and timing context.
+
+### Evidence-Backed Coaching
+
+![Strata Coach page showing persisted recommendations and deterministic supporting evidence](docs/assets/strata-coach.png)
+
+Coaching recommendations are grounded in deterministic evidence and persisted backend state.
+
+### Closed-Loop Progress
+
+![Strata Progress page showing before and after evidence, sample strength, delta, and outcome](docs/assets/strata-progress.png)
+
+Progress connects a recommendation to later-match evidence and measured effectiveness.
+
+## Engineering Highlights
+
+- FastAPI/Pydantic/SQLAlchemy backend organized around product routes and domain services.
+- PostgreSQL 16 and Alembic schema migration path, with SQLite retained for local tests and the public demo runtime.
+- Provider boundary separates deterministic synthetic ingestion from future approved Riot ingestion.
+- Synthetic and Riot-like data use shared validation, normalization, duplicate handling, persistence, and analytics paths.
+- Durable normalized match history with database-enforced external match uniqueness.
+- Deterministic analytics are separated from optional AI interpretation.
+- Persisted Recommendation lifecycle with backend-owned analytical outcomes.
+- Recommendation-specific before/after progress evaluation with sample-aware evidence levels.
+- Structured JSON logging, request IDs, health/readiness checks, and Prometheus metrics.
+- Docker Compose and GitHub Actions cover backend tests, migrations, frontend build, dependency audits, and secret scanning.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    Browser[React / TypeScript frontend] --> API[FastAPI REST API]
+
+    API --> Ingestion[Match ingestion and provider layer]
+    API --> Analytics[Deterministic analytics]
+    API --> Review[Reviews and issue evidence]
+    API --> Coach[Coaching and recommendations]
+    API --> Progress[Progress evaluation]
+
+    subgraph Providers[Shared provider boundary]
+        Synthetic[Synthetic provider]
+        Riot[Riot API provider after approval]
+        Synthetic --> Validation[Payload validation]
+        Riot --> Validation
+        Validation --> Normalization[Normalization]
+        Normalization --> Persistence[Match persistence]
+    end
+
+    Ingestion --> Providers
+    Persistence --> SQLAlchemy[SQLAlchemy]
+    Analytics --> SQLAlchemy
+    Review --> SQLAlchemy
+    Coach --> SQLAlchemy
+    Progress --> SQLAlchemy
+    SQLAlchemy --> Database[(PostgreSQL 16 validated architecture)]
+    SQLAlchemy -. public demo .-> SQLite[(Ephemeral SQLite)]
 ```
 
-### Frontend
+Live Riot production access is not part of the public demo. The retained adapter is behind the same provider boundary and requires Riot approval and credentials before it is useful in a real deployment.
 
-```powershell
-cd frontend
-npm ci
-npm run dev
-```
+## Public Demo Vs Validated Architecture
 
-Frontend default URL: `http://localhost:5173`  
-Backend health check: `http://127.0.0.1:8000/health`
+| Area | Public portfolio demo | Validated architecture |
+| --- | --- | --- |
+| Database | Ephemeral SQLite in the backend container | PostgreSQL 16 |
+| Data | Deterministic synthetic dataset | Same normalized domain model |
+| Mutations | Read-only demo mode | Full local workflow |
+| Migrations | Alembic on startup | Alembic on startup/CI |
+| Purpose | Cheap public demonstration | Production-style engineering validation |
 
-### Docker Compose stack
+The public demo uses SQLite because it contains no real users, no durable user data, and a deterministic seed that is recreated on startup. PostgreSQL behavior is exercised through Docker and GitHub Actions.
 
-Docker Desktop provides the recommended local stack on Windows. From the repository
-root in PowerShell:
+## Recommendation Effectiveness
 
-```powershell
-docker compose up --build
-```
+Recommendations are first-class persisted entities. Review evidence links recurring issues to recommendations, and subsequent matches provide after-evidence for evaluation.
 
-This starts PostgreSQL, runs `alembic upgrade head` in the backend before Uvicorn,
-and serves the Vite production build through nginx. Open `http://localhost:5173`;
-the API is available at `http://localhost:8000` and the database is persisted in the
-`strata-postgres-data` named volume. No Riot or OpenAI key is required.
+The progress evaluator compares issue recurrence and performance metrics, then stores computed evidence. Evidence strength is separate from outcome:
 
-In a second PowerShell window, seed the containerized PostgreSQL database:
+| Concept | Values |
+| --- | --- |
+| Evidence level | `insufficient_data`, `directional`, `supported` |
+| Recommendation lifecycle | `active`, `completed`, `superseded` |
+| Analytical outcome | `effective`, `ineffective`, `inconclusive` |
 
-```powershell
+`supported` means the sample is strong enough for Strata's deterministic evaluator. It is not a statistical-significance claim.
+
+## Deterministic Analytics Before AI
+
+**The model may explain the numbers. It does not create the numbers.**
+
+Win rate, ACS, K/D, recurring issue counts, before/after evidence, and recommendation effectiveness are calculated deterministically. AI is optional interpretation behind a provider boundary, and the public demo remains useful with AI disabled.
+
+See [ADR 0001: Deterministic Analytics Before AI](docs/adr/0001-deterministic-analytics-before-ai.md).
+
+## Reliability And Observability
+
+The backend includes structured JSON logs, request IDs, request latency, operation timing, `/health` liveness, `/ready` database readiness, and Prometheus metrics at `/metrics`.
+
+Example metric names:
+
+- `strata_http_requests_total`
+- `strata_http_request_duration_seconds`
+- `strata_analytics_calculation_duration_seconds`
+- `strata_recommendation_evaluation_duration_seconds`
+
+Request bodies and secrets are not logged. Metric labels use normalized routes to avoid high-cardinality path values. Prometheus instrumentation exists; hosted Grafana dashboards remain future work.
+
+## PostgreSQL Validation Evidence
+
+Local Docker PostgreSQL 16 validation has passed with migration head `20260908_0001`.
+
+Verified results:
+
+- 8 migrated tables
+- 17 indexes
+- 40 seeded matches
+- 1 persisted recommendation
+- 1 persisted progress record
+- persisted progress evidence
+- JSONB verified
+- external match uniqueness verified
+- foreign keys verified
+- repeat-safe seeding verified
+
+GitHub Actions independently exercises PostgreSQL migrations with a PostgreSQL 16 service. This is schema and behavior validation, not production cloud load testing.
+
+## Running Locally
+
+```bash
+docker compose up --build -d
 docker compose run --rm backend python -m app.seed_demo --allow-nonlocal
 ```
 
-Useful commands are `docker compose down`, `docker compose logs -f`,
-`docker compose run --rm backend alembic upgrade head`, and
-`docker compose down -v` for a disposable clean database reset. The explicit
-`--allow-nonlocal` is required because the seed guard protects non-file databases.
-The focused production-schema check, including a repeat seed, is:
+Then open:
 
-```powershell
+| Service | URL |
+| --- | --- |
+| Frontend | `http://127.0.0.1:5173` |
+| API | `http://127.0.0.1:8000` |
+| Health | `http://127.0.0.1:8000/health` |
+| Readiness | `http://127.0.0.1:8000/ready` |
+| Metrics | `http://127.0.0.1:8000/metrics` |
+
+Run the PostgreSQL smoke check:
+
+```bash
 docker compose run --rm backend python scripts/smoke_test_postgres.py --repeat-seed
 ```
 
-The same commands are available through `.\scripts\strata.ps1` (for example,
-`.\scripts\strata.ps1 validate-postgres`). Compose defaults map the frontend to
-port 5173, the API to 8000, and PostgreSQL to 5432; set `FRONTEND_PORT`,
-`BACKEND_PORT`, or `POSTGRES_PORT` in the PowerShell environment if a port is busy.
-If changing the frontend port, also configure that origin in the backend CORS policy.
+The Docker backend applies `alembic upgrade head` before Uvicorn starts. One-off `docker compose run` commands execute the supplied command and exit normally.
 
-### Demo data
+## Testing And CI
 
-From `backend`, with dependencies installed:
+GitHub Actions runs:
 
-```powershell
-python -m app.seed_demo
-```
+- backend unit tests
+- Python compile validation
+- PostgreSQL migration upgrade/downgrade/upgrade cycle
+- migrated-table schema assertion
+- frontend TypeScript check
+- frontend production build
+- runtime npm dependency audit
+- Python dependency audit
+- repository secret scan with Gitleaks
 
-This creates the schema and imports 40 fictional matches from the checked-in fixture.
-Repeat runs skip existing external IDs, preserving reviews and other local work.
-It makes no network calls and does not generate historical recommendations or progress.
-By default it only permits `environment=local`, `development`, or `test`, and the
-SQLite file `backend/strata.db` (or in-memory SQLite). Other targets require the
-explicit `--allow-nonlocal` override. Never use that flag casually on a shared database.
-For a clean demo, stop the backend, remove your disposable local `strata.db`, and seed again.
+See [docs/CI.md](docs/CI.md) for the workflow summary.
 
-Explore Matches and Insights, add a note in Review, generate a report in Coach,
-and generate a snapshot in Progress. New recommendations have no future evidence yet;
-insufficient evidence is expected, not a precomputed success claim. Review tags are
-entered through the application; the fixture does not invent review observations.
+## Security And Public Demo Behavior
 
-See [fixture provenance and limitations](backend/seeds/README.md). The raw fixture
-is a Riot-like payload collection and is **not** the normalized JSON import body.
+The hosted demo runs with `PUBLIC_DEMO_MODE=true` and synthetic data only. Protected mutations return a read-only response in the public demo, including match import, Riot sync, review mutations, coaching generation, recommendation updates, progress generation, and settings changes.
 
-### Environment setup (optional)
+Local development can still run the mutable workflow when demo mode is disabled.
 
-`backend/.env.example` contains safe local defaults and blank credential placeholders.
-Copy it to `.env` only if you need overrides. The default coaching mode is
-`deterministic` and AI is disabled. No paid service is required.
+## Key Design Decisions
 
-Live Riot imports require approved Riot access and `riot_api_key`. AI modes are
-optional: set `coaching_ai_enabled=true`, `openai_api_key`, and `coaching_mode=hybrid`
-or `ai_first` only when deliberately enabling an external service. Do not publish
-local `.env` files or databases. Never put usable credentials in examples.
+- [ADR 0001: Deterministic Analytics Before AI](docs/adr/0001-deterministic-analytics-before-ai.md)
+- [ADR 0002: Synthetic and Riot Provider Boundary](docs/adr/0002-synthetic-and-riot-provider-boundary.md)
+- [ADR 0003: PostgreSQL and Alembic](docs/adr/0003-postgresql-and-alembic.md)
+- [ADR 0004: Background Sync Deferred From First Release](docs/adr/0004-background-sync-deferred-from-first-release.md)
 
-## Match import contract
+## Tradeoffs And Future Work
 
-`POST /api/v1/matches/import` accepts `{ "matches": [...] }` with normalized
-`MatchImportItem` objects (see `backend/app/schemas/match.py` or `/docs`). This
-manual import remains supported. Synthetic and live Riot adapters instead share
-raw payload validation and normalization before using the same persistence service.
+- Riot production API integration after approval.
+- Asynchronous ingestion and SyncJob workflow.
+- Redis/Celery or equivalent task processing if background sync needs it.
+- Rate limiting, retry, and backoff behavior for live Riot ingestion.
+- OpenTelemetry distributed traces.
+- Prometheus and Grafana operational dashboard.
+- Authenticated multi-user deployment.
 
-### Optional Riot live import
+## Tech Stack
 
-Endpoint:
-- `POST /api/v1/matches/import/riot`
+| Area | Stack |
+| --- | --- |
+| Frontend | React, TypeScript, Vite |
+| Backend | FastAPI, Pydantic, SQLAlchemy |
+| Persistence | PostgreSQL 16, SQLite demo runtime, Alembic |
+| Runtime | Docker, Docker Compose, nginx |
+| Observability | structured logging, Prometheus metrics, health/readiness |
+| CI/security | GitHub Actions, pip-audit, npm audit, Gitleaks |
 
-Body:
+## Disclaimer
 
-```json
-{
-  "game_name": "PlayerName",
-  "tag_line": "NA1",
-  "region": "na",
-  "max_matches": 10
-}
-```
-
-Requirements:
-- `riot_api_key` configured in `backend/.env`
-- valid Riot region: `na`, `eu`, `ap`, `kr`, `latam`, `br`, `esports`
-
-## Local API Smoke Test
-
-After seeding, with the backend running:
-
-```powershell
-cd backend
-python scripts/smoke_test_phase2.py
-```
-
-This script:
-1. checks `/health`
-2. verifies populated match history without modifying it
-3. reads back `GET /api/v1/matches?limit=10`
-
-## Insights API
-
-Endpoint:
-
-`GET /api/v1/insights?recent_window=10`
-
-Returns:
-- `recent_form`
-- `baseline_form`
-- `trend_summary`
-- `streaks`
-- `volatility`
-- `map_breakdowns`
-- `agent_breakdowns`
-- `role_breakdowns`
-
-Open in browser while backend is running:
-
-`http://127.0.0.1:8000/api/v1/insights?recent_window=10`
-
-## Review API
-
-Endpoints:
-- `GET /api/v1/review/notes?match_id=1`
-- `GET /api/v1/review/notes/{note_id}`
-- `POST /api/v1/review/notes`
-- `PUT /api/v1/review/notes/{note_id}`
-- `DELETE /api/v1/review/notes/{note_id}`
-- `POST /api/v1/review/notes/{note_id}/tags`
-- `DELETE /api/v1/review/tags/{tag_id}`
-- `GET /api/v1/review/issues/recurring`
-
-## Coach API
-
-Endpoints:
-- `POST /api/v1/coach/generate` with body `{ "recent_window": 10 }`
-- `POST /api/v1/coach/pro-brief` with body `{ "recent_window": 10, "match_id": 42 }` (`match_id` optional)
-- `GET /api/v1/coach/latest`
-- `GET /api/v1/coach/reports?limit=10`
-
-The coaching engine supports deterministic-only, hybrid, and AI-first modes.
-
-### Coaching Intelligence Modes
-
-1. Deterministic (default, zero-cost):
-- Uses local insights + recurring review tags + weighted assessment scoring.
-- Produces stable, explainable coaching outputs.
-
-2. Hybrid AI refinement:
-- Enable by setting `coaching_ai_enabled=true` and `openai_api_key`.
-- Set `coaching_mode=hybrid`.
-- Deterministic output is generated first, then optionally refined by LLM.
-- If AI call fails, it safely falls back to deterministic output.
-
-3. AI-first (real-time AI as primary engine):
-- Enable `coaching_ai_enabled=true`, set `openai_api_key`, and `coaching_mode=ai_first`.
-- `/api/v1/coach/generate` uses LLM-generated coaching content as the main output.
-- If API key/config is missing, generation returns an error until AI is configured.
-
-### Pro Coaching Brief Endpoint
-
-`POST /api/v1/coach/pro-brief`
-
-Purpose:
-- Returns personalized, direct, professional-style coaching guidance.
-- Includes strengths, role fit, limiting patterns, harsh truths, priority improvements, and a weekly program.
-- Optional `match_id` triggers one-game deep breakdown.
-
-## Progress API
-
-Endpoints:
-- `POST /api/v1/progress/generate` with body `{ "recent_window": 10, "previous_window": 10 }`
-- `GET /api/v1/progress/latest`
-- `GET /api/v1/progress?limit=10`
-
-## Settings API
-
-Endpoints:
-- `GET /api/v1/settings/profile`
-- `PUT /api/v1/settings/profile`
-
-## Home API
-
-Endpoints:
-- `GET /api/v1/home/summary?recent_window=10`
-
-## Validation
-
-From `backend` (uses the standard-library test runner and installed backend requirements):
-
-```powershell
-python -B -m unittest discover -s tests -v
-```
-
-Tests cover normalization, malformed input, offline operation, duplicate imports,
-seed target guards, fixture trends, and existing review/coaching/progress services.
-From `frontend`: `npm ci` then `npm run build`.
-
-## Guiding Principle
-
-Build each capability vertically so every step becomes usable in the UI, not just structurally complete.
+Strata is an independent portfolio project and is not affiliated with or endorsed by Riot Games. VALORANT and related trademarks belong to Riot Games.

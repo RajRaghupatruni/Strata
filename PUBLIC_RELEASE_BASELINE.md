@@ -1,6 +1,8 @@
 # First-publication baseline
 
-Completed September 8, 2026. No commit, remote, push, or publication was performed.
+Initial repository hygiene and release baseline completed September 8, 2026. The
+portfolio deployment is now public at `https://strata-s41v.onrender.com`, with the API
+at `https://strata-apii.onrender.com`.
 
 ## A. Observations before edits
 
@@ -51,7 +53,7 @@ Changed:
 - `backend/app/services/ingestion/riot.py`: shared validation/normalization, round-derived
   ADR/headshot metrics, synthetic provenance, known demo roles, and object-form history IDs.
 - `backend/app/api/routes/matches.py`: delegates persistence to the shared service.
-- `backend/scripts/smoke_test_phase2.py`: checks seeded history without bypassing ingestion.
+- Backend smoke script: checks seeded history without bypassing ingestion.
 - `README.md`, `ARCHITECTURE.md`, `PRODUCT_VISION.md`, `MVP_ROADMAP.md`: supported demo
   workflow, current implementation, and original/future product direction distinguished.
 
@@ -137,7 +139,7 @@ against that port. For normal local use its equivalent is:
 ```powershell
 uvicorn app.main:app --port 8000
 # In a second backend terminal:
-python scripts/smoke_test_phase2.py
+python scripts/smoke_test_postgres.py --repeat-seed
 ```
 
 ## H. Results
@@ -168,11 +170,9 @@ the harness, and the application checks passed. FastAPI emits its existing depre
 
 ## I. Manual actions remaining
 
-- Owner rotates the removed OpenAI key before publication, as planned.
 - Recreate local dependencies and seed state using the README when resuming development.
 - The frontend recommendation/effectiveness integration and the backend recommendation
-  contract are now merged. Perform the owner's final publication review before creating
-  the first public commit.
+  contract are merged and visible in the public demo.
 - Pursue Riot approval only for the optional real adapter; the demo does not depend on it.
 
 ## J. Next P0 blockers and limitations
@@ -187,4 +187,4 @@ limits, not claims of production readiness:
   application-level duplicate handling.
 - Recommendations persist as first-class records, with deterministic sample-aware
   effectiveness evidence (`insufficient_data`, `directional`, and `supported`).
-- No authentication, multi-user isolation, hosted infrastructure, or scalability claims were added.
+- No authentication, multi-user isolation, durable hosted database, or scalability claims were added.

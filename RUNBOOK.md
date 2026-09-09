@@ -1,7 +1,22 @@
 # Strata Operational Runbook
 
-This runbook covers the first public-release baseline and marks pending infrastructure
-explicitly. Commands assume Windows PowerShell from `C:\Raj\Code\Strata`.
+This runbook covers the public portfolio release baseline. Commands assume Windows
+PowerShell from `C:\Raj\Code\Strata`.
+
+## Public Demo
+
+| Service | URL |
+| --- | --- |
+| Frontend | `https://strata-s41v.onrender.com` |
+| Backend API | `https://strata-apii.onrender.com` |
+| Health | `https://strata-apii.onrender.com/health` |
+| Readiness | `https://strata-apii.onrender.com/ready` |
+| Metrics | `https://strata-apii.onrender.com/metrics` |
+
+The public demo runs on Render with a static React/Vite frontend and a FastAPI backend.
+It intentionally uses `PUBLIC_DEMO_MODE=true`, deterministic synthetic data, and an
+ephemeral SQLite database at startup. This keeps the portfolio demo cheap and
+repeatable while PostgreSQL 16 remains the validated durable architecture.
 
 ## Local Startup
 
@@ -244,7 +259,7 @@ Default deterministic coaching does not require AI.
 | `hybrid` | Deterministic report is generated first; AI refinement may be skipped/fail and should not remove the base report. |
 | `ai_first` | Requires explicit AI configuration and should error clearly when missing or failing. |
 
-For public demos, prefer deterministic or tightly controlled hybrid behavior unless
+For public demos, keep deterministic coaching enabled and AI disabled unless
 authentication, quotas, and cost controls exist.
 
 ## Hosted Demo Read-Only Mode
@@ -270,23 +285,22 @@ Expected behavior:
 
 ## Logs and Request IDs
 
-OpenTelemetry instrumentation and Grafana dashboards are still pending P1 work.
-
-Current local troubleshooting uses terminal output from Uvicorn, browser network
-details, and API error responses. Once request ID middleware and structured logging are
-implemented, update this section with:
+Current troubleshooting uses structured JSON logs, request IDs, Uvicorn/container
+output, browser network details, API error responses, and Prometheus metrics.
+OpenTelemetry instrumentation and Grafana dashboards are still pending work.
 
 | Item | Required detail |
 | --- | --- |
-| Request ID header | Header name and how to find it in browser/API responses. |
-| Backend logs | Where logs are stored or streamed in each environment. |
-| Deployment logs | Provider-specific command or console path. |
-| Error correlation | How to search a request ID across frontend, backend, and provider logs. |
+| Request ID | Inspect response headers and structured backend log fields. |
+| Backend logs | Use local terminal output, Docker logs, or Render service logs. |
+| Metrics | Check `/metrics` for Prometheus-format counters and histograms. |
+| Health | `/health` proves process liveness; `/ready` proves database readiness. |
 
 ## CORS and Configuration Issues
 
 Current backend CORS allows local Vite origins: `http://localhost:5173` and
-`http://127.0.0.1:5173`.
+`http://127.0.0.1:5173`. Hosted frontend origins are supplied with
+`CORS_ALLOWED_ORIGINS`.
 
 For hosted release:
 
@@ -298,16 +312,18 @@ For hosted release:
 
 ## Deployment Rollback
 
-Pending hosting implementation.
-
-Public hosting will be added before release. Once selected, document:
+The public portfolio deployment is managed in Render. For this release, rollback is a
+platform-level redeploy/rollback of the static site and web service. The demo database
+is ephemeral synthetic state, so no durable user-data rollback is required for the
+hosted demo.
 
 | Area | Needed detail |
 | --- | --- |
-| Artifact/version | How a release is identified. |
-| Rollback command | Exact platform command or console action. |
-| Database policy | Whether schema rollbacks are supported or fixes are forward-only. |
-| Secret rollback | How to restore prior environment variables safely. |
+| Artifact/version | Use the Git commit deployed by Render. |
+| Rollback action | Redeploy a previous known-good Render deploy. |
+| Demo database policy | SQLite state is disposable and reseeded on backend startup. |
+| Durable database policy | Future PostgreSQL deployments need explicit migration and rollback policy. |
+| Secret rollback | Restore prior environment variables through the Render dashboard if needed. |
 | Verification | Health, frontend smoke test, and seeded demo-state checks after rollback. |
 
 ## Restoring Deterministic Demo State
